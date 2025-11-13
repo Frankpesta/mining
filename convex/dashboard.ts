@@ -1,7 +1,9 @@
 import { ConvexError, v } from "convex/values";
+import type { FunctionReturnType } from "convex/server";
 
 import { query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import type { api } from "./_generated/api";
 
 const sumPlatformBalance = (balance: { ETH: number; USDT: number; USDC: number }) =>
   (balance.ETH ?? 0) + (balance.USDT ?? 0) + (balance.USDC ?? 0);
@@ -143,12 +145,12 @@ export const getAdminDashboardSummary = query({
   },
 });
 
-export type UserDashboardSummary = Awaited<
-  ReturnType<typeof getUserDashboardSummary["handler"]>
+export type UserDashboardSummary = FunctionReturnType<
+  typeof api.dashboard.getUserDashboardSummary
 >;
 
-export type AdminDashboardSummary = Awaited<
-  ReturnType<typeof getAdminDashboardSummary["handler"]>
+export type AdminDashboardSummary = FunctionReturnType<
+  typeof api.dashboard.getAdminDashboardSummary
 >;
 
 export type DashboardUserId = Id<"users">;
