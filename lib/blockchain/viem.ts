@@ -1,7 +1,7 @@
 import { createPublicClient, http, isAddress, formatUnits, parseUnits, type Address, type PublicClient } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 
-type SupportedCrypto = "ETH" | "USDT" | "USDC";
+export type SupportedCrypto = "ETH" | "USDT" | "USDC";
 
 // ERC20 token addresses on mainnet
 const ERC20_CONTRACTS: Record<SupportedCrypto, Address> = {

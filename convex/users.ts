@@ -1,7 +1,9 @@
 import { ConvexError, v } from "convex/values";
+import type { FunctionReturnType } from "convex/server";
 
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import type { api } from "./_generated/api";
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
@@ -191,9 +193,8 @@ export const adjustMiningBalance = mutation({
       throw new ConvexError("User not found");
     }
     const current =
-      args.coin in user.miningBalance
-        ? // @ts-expect-error - dynamic lookup handled below
-          user.miningBalance[args.coin as keyof typeof user.miningBalance]
+      args.coin === "BTC" || args.coin === "ETH" || args.coin === "LTC"
+        ? user.miningBalance[args.coin]
         : user.miningBalance.others?.[args.coin] ?? 0;
 
     const nextValue = current + args.amountDelta;
@@ -223,7 +224,7 @@ export const adjustMiningBalance = mutation({
   },
 });
 
-export type UserDoc = NonNullable<Awaited<ReturnType<typeof getUserByEmail["handler"]>>>;
+export type UserDoc = NonNullable<FunctionReturnType<typeof api.users.getUserByEmail>>;
 
 export type UserId = Id<"users">;
 

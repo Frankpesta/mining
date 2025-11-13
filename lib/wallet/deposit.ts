@@ -1,4 +1,4 @@
-import { parseUnits, formatUnits, type Address } from "viem";
+import { parseUnits, formatUnits, encodeFunctionData, type Address } from "viem";
 import { getViemClient, normalizeAddress } from "@/lib/blockchain/viem";
 
 // ERC20 token addresses on mainnet
@@ -60,8 +60,7 @@ export function prepareTokenTransfer(
   const amountInSmallestUnit = parseUnits(amount.toString(), decimals);
 
   // Encode the transfer function call
-  const client = getViemClient();
-  const data = client.encodeFunctionData({
+  const data = encodeFunctionData({
     abi: ERC20_ABI,
     functionName: "transfer",
     args: [normalizedTo, amountInSmallestUnit],

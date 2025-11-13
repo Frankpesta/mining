@@ -39,7 +39,6 @@ export const getSessionById = query({
       return null;
     }
     if (session.expiresAt < Date.now()) {
-      await ctx.db.delete(session._id);
       return null;
     }
     return session;
@@ -60,7 +59,6 @@ export const verifySessionToken = query({
       return null;
     }
     if (session.expiresAt < Date.now()) {
-      await ctx.db.delete(session._id);
       return null;
     }
     return session;

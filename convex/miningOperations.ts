@@ -160,10 +160,11 @@ export const updateMiningOperationEarnings = mutation({
     const balanceDelta = args.totalMined - operation.totalMined;
 
     if (coin === "BTC" || coin === "ETH" || coin === "LTC") {
+      const coreCoin = coin as "BTC" | "ETH" | "LTC";
       await ctx.db.patch(operation.userId, {
         miningBalance: {
           ...user.miningBalance,
-          [coin]: (user.miningBalance[coin as keyof typeof user.miningBalance] ?? 0) + balanceDelta,
+          [coreCoin]: (user.miningBalance[coreCoin] ?? 0) + balanceDelta,
         },
       });
     } else {
