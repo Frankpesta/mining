@@ -14,6 +14,7 @@ export async function verifyDepositTx(
   } catch (error) {
     return {
       isValid: false,
+      confirmed: false,
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }

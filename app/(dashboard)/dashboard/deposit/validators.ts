@@ -3,10 +3,7 @@ import { z } from "zod";
 export const depositRequestSchema = z.object({
   crypto: z.enum(["ETH", "USDT", "USDC"]),
   amount: z.coerce
-    .number({
-      invalid_type_error: "Enter a numeric amount",
-      required_error: "Amount is required",
-    })
+    .number("Enter a numeric amount")
     .positive("Amount must be greater than zero"),
   txHash: z
     .string()

@@ -33,6 +33,9 @@ export function DepositReviewCard({ deposit }: { deposit: AdminDeposit }) {
   const [verificationResult, setVerificationResult] = useState<{
     isValid: boolean;
     confirmed: boolean;
+    actualAmount?: number;
+    actualTo?: string;
+    blockNumber?: bigint;
     error?: string;
   } | null>(null);
   const isActionable = deposit.status === "pending";

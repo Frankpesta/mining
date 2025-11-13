@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { signOutAction } from "@/app/(dashboard)/actions";
 import { AppShell } from "@/components/layout/app-shell";
+import type { SidebarNavItem } from "@/components/dashboard/sidebar-nav";
 import { getCurrentUser } from "@/lib/auth/session";
 
 const navigation = [
@@ -12,7 +13,7 @@ const navigation = [
   { href: "/dashboard/activity", label: "Activity", icon: "chart-line" },
   { href: "/dashboard/wallet", label: "Wallet", icon: "coins" },
   { href: "/dashboard/withdraw", label: "Withdraw", icon: "waypoints" },
-] as const;
+] satisfies SidebarNavItem[];
 
 export default async function DashboardLayout({
   children,
