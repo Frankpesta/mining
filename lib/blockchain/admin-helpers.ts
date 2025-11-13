@@ -23,6 +23,7 @@ export async function verifyDepositTransaction(
     if (!normalizedAddress) {
       return {
         isValid: false,
+        confirmed: false,
         error: "Invalid wallet address format",
       };
     }
@@ -38,6 +39,7 @@ export async function verifyDepositTransaction(
   } catch (error) {
     return {
       isValid: false,
+      confirmed: false,
       error: error instanceof Error ? error.message : "Unknown error",
     };
   }
