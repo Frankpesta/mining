@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { signOutAction } from "@/app/(dashboard)/actions";
 import { AppShell } from "@/components/layout/app-shell";
+import type { SidebarNavItem } from "@/components/dashboard/sidebar-nav";
 import { getCurrentUser, requireAdminSession } from "@/lib/auth/session";
 
 const navigation = [
@@ -13,7 +14,7 @@ const navigation = [
   { href: "/admin/mining-operations", label: "Mining Ops", icon: "activity" },
   { href: "/admin/analytics", label: "Analytics", icon: "bar-chart-3" },
   { href: "/admin/settings", label: "Settings", icon: "settings" },
-] as const;
+] satisfies SidebarNavItem[];
 
 export default async function AdminLayout({
   children,
