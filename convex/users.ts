@@ -1,0 +1,229 @@
+import { ConvexError, v } from "convex/values";
+
+import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
+export const getUserByEmail = query({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const email = normalizeEmail(args.email);
+    return ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+  },
+});
+
+export const getUserById = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return ctx.db.get(args.userId);
+  },
+});
+
+export const createUser = mutation({
+  args: {
+    email: v.string(),
+    passwordHash: v.string(),
+    verificationToken: v.string(),
+    verificationTokenExpiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const email = normalizeEmail(args.email);
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+
+    if (existingUser) {
+      throw new ConvexError("Email is already registered");
+    }
+
+    const now = Date.now();
+    return ctx.db.insert("users", {
+      email,
+      passwordHash: args.passwordHash,
+      role: "user",
+      isEmailVerified: false,
+      verificationToken: args.verificationToken,
+      verificationTokenExpiresAt: args.verificationTokenExpiresAt,
+      resetToken: undefined,
+      resetTokenExpiresAt: undefined,
+      platformBalance: { ETH: 0, USDT: 0, USDC: 0 },
+      miningBalance: { BTC: 0, ETH: 0, LTC: 0, others: undefined },
+      isSuspended: false,
+      createdAt: now,
+      lastLogin: undefined,
+    });
+  },
+});
+
+export const setVerificationToken = mutation({
+  args: {
+    userId: v.id("users"),
+    verificationToken: v.string(),
+    verificationTokenExpiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      verificationToken: args.verificationToken,
+      verificationTokenExpiresAt: args.verificationTokenExpiresAt,
+      isEmailVerified: false,
+    });
+  },
+});
+
+export const consumeVerificationToken = mutation({
+  args: { token: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_verification_token", (q) => q.eq("verificationToken", args.token))
+      .first();
+
+    if (!user) {
+      throw new ConvexError("Invalid verification token");
+    }
+
+    if (user.verificationTokenExpiresAt && user.verificationTokenExpiresAt < Date.now()) {
+      throw new ConvexError("Verification token has expired");
+    }
+
+    await ctx.db.patch(user._id, {
+      isEmailVerified: true,
+      verificationToken: undefined,
+      verificationTokenExpiresAt: undefined,
+    });
+
+    return user._id;
+  },
+});
+
+export const setResetToken = mutation({
+  args: {
+    userId: v.id("users"),
+    resetToken: v.string(),
+    resetTokenExpiresAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, {
+      resetToken: args.resetToken,
+      resetTokenExpiresAt: args.resetTokenExpiresAt,
+    });
+  },
+});
+
+export const consumeResetToken = mutation({
+  args: { token: v.string(), passwordHash: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_reset_token", (q) => q.eq("resetToken", args.token))
+      .first();
+
+    if (!user) {
+      throw new ConvexError("Invalid reset token");
+    }
+
+    if (user.resetTokenExpiresAt && user.resetTokenExpiresAt < Date.now()) {
+      throw new ConvexError("Reset token has expired");
+    }
+
+    await ctx.db.patch(user._id, {
+      passwordHash: args.passwordHash,
+      resetToken: undefined,
+      resetTokenExpiresAt: undefined,
+    });
+
+    return user._id;
+  },
+});
+
+export const updateLastLogin = mutation({
+  args: { userId: v.id("users"), lastLogin: v.number() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { lastLogin: args.lastLogin });
+  },
+});
+
+export const suspendUser = mutation({
+  args: { userId: v.id("users"), isSuspended: v.boolean() },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userId, { isSuspended: args.isSuspended });
+  },
+});
+
+export const adjustPlatformBalance = mutation({
+  args: {
+    userId: v.id("users"),
+    currency: v.union(v.literal("ETH"), v.literal("USDT"), v.literal("USDC")),
+    amountDelta: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new ConvexError("User not found");
+    }
+    const balance = user.platformBalance[args.currency] + args.amountDelta;
+    if (balance < 0) {
+      throw new ConvexError("Insufficient balance");
+    }
+    await ctx.db.patch(args.userId, {
+      platformBalance: {
+        ...user.platformBalance,
+        [args.currency]: balance,
+      },
+    });
+  },
+});
+
+export const adjustMiningBalance = mutation({
+  args: {
+    userId: v.id("users"),
+    coin: v.string(),
+    amountDelta: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) {
+      throw new ConvexError("User not found");
+    }
+    const current =
+      args.coin in user.miningBalance
+        ? // @ts-expect-error - dynamic lookup handled below
+          user.miningBalance[args.coin as keyof typeof user.miningBalance]
+        : user.miningBalance.others?.[args.coin] ?? 0;
+
+    const nextValue = current + args.amountDelta;
+    if (nextValue < 0) {
+      throw new ConvexError("Insufficient mining balance");
+    }
+
+    if (args.coin === "BTC" || args.coin === "ETH" || args.coin === "LTC") {
+      await ctx.db.patch(args.userId, {
+        miningBalance: {
+          ...user.miningBalance,
+          [args.coin]: nextValue,
+        },
+      });
+      return;
+    }
+
+    await ctx.db.patch(args.userId, {
+      miningBalance: {
+        ...user.miningBalance,
+        others: {
+          ...user.miningBalance.others,
+          [args.coin]: nextValue,
+        },
+      },
+    });
+  },
+});
+
+export type UserDoc = NonNullable<Awaited<ReturnType<typeof getUserByEmail["handler"]>>>;
+
+export type UserId = Id<"users">;
+

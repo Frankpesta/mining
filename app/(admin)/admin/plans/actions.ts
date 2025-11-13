@@ -1,0 +1,107 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { api } from "@/convex/_generated/api";
+import { getConvexClient } from "@/lib/convex/client";
+import { getCurrentUser, requireAdminSession } from "@/lib/auth/session";
+import type { Id } from "@/convex/_generated/dataModel";
+
+type CreatePlanInput = {
+  name: string;
+  hashRate: number;
+  hashRateUnit: "TH/s" | "GH/s" | "MH/s";
+  duration: number;
+  priceUSD: number;
+  supportedCoins: string;
+  estimatedDailyEarning: number;
+  isActive: boolean;
+  features: string;
+};
+
+type UpdatePlanInput = CreatePlanInput & {
+  planId: string;
+};
+
+export async function createPlan(input: CreatePlanInput) {
+  await requireAdminSession();
+  const convex = getConvexClient();
+
+  const supportedCoins = input.supportedCoins
+    .split(",")
+    .map((coin) => coin.trim().toUpperCase())
+    .filter(Boolean);
+
+  const features = input.features
+    .split(/[,\n]/)
+    .map((feature) => feature.trim())
+    .filter(Boolean);
+
+  await convex.mutation(api.plans.createPlan, {
+    name: input.name,
+    hashRate: input.hashRate,
+    hashRateUnit: input.hashRateUnit,
+    duration: input.duration,
+    priceUSD: input.priceUSD,
+    supportedCoins,
+    estimatedDailyEarning: input.estimatedDailyEarning,
+    isActive: input.isActive,
+    features,
+  });
+
+  revalidatePath("/admin/plans");
+}
+
+export async function updatePlan(input: UpdatePlanInput) {
+  await requireAdminSession();
+  const convex = getConvexClient();
+
+  const supportedCoins = input.supportedCoins
+    .split(",")
+    .map((coin) => coin.trim().toUpperCase())
+    .filter(Boolean);
+
+  const features = input.features
+    .split(/[,\n]/)
+    .map((feature) => feature.trim())
+    .filter(Boolean);
+
+  await convex.mutation(api.plans.updatePlan, {
+    planId: input.planId as Id<"plans">,
+    name: input.name,
+    hashRate: input.hashRate,
+    hashRateUnit: input.hashRateUnit,
+    duration: input.duration,
+    priceUSD: input.priceUSD,
+    supportedCoins,
+    estimatedDailyEarning: input.estimatedDailyEarning,
+    isActive: input.isActive,
+    features,
+  });
+
+  revalidatePath("/admin/plans");
+}
+
+export async function deletePlan(planId: string) {
+  await requireAdminSession();
+  const convex = getConvexClient();
+
+  await convex.mutation(api.plans.deletePlan, {
+    planId: planId as Id<"plans">,
+  });
+
+  revalidatePath("/admin/plans");
+}
+
+export async function togglePlanStatus(planId: string, isActive: boolean) {
+  await requireAdminSession();
+  const convex = getConvexClient();
+
+  await convex.mutation(api.plans.updatePlan, {
+    planId: planId as Id<"plans">,
+    isActive,
+  });
+
+  revalidatePath("/admin/plans");
+}
+
