@@ -40,7 +40,7 @@ type DepositFormWalletProps = {
   minimums?: Partial<Record<Crypto, number>>;
 };
 
-const DEFAULT_MINIMUMS: DepositFormWalletProps["minimums"] = {
+const DEFAULT_MINIMUMS: Record<Crypto, number> = {
   ETH: 0.01,
   USDT: 25,
   USDC: 25,
