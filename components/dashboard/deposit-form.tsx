@@ -36,7 +36,7 @@ type DepositFormProps = {
   minimums?: Partial<Record<Crypto, number>>;
 };
 
-const DEFAULT_MINIMUMS: DepositFormProps["minimums"] = {
+const DEFAULT_MINIMUMS: Record<Crypto, number> = {
   ETH: 0.01,
   USDT: 25,
   USDC: 25,
@@ -128,18 +128,24 @@ export function DepositForm({ wallets, minimums }: DepositFormProps) {
         <FormField
           control={form.control}
           name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Amount</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  type="number"
-                  step="any"
-                  min={minAmount ?? 0}
-                  placeholder={`Enter amount in ${selectedCrypto}`}
-                  disabled={isDisabled}
-                />
+          render={({ field }) => {
+            const stringValue: string = typeof field.value === "string" ? field.value : (field.value?.toString() ?? "");
+            return (
+              <FormItem>
+                <FormLabel>Amount</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="any"
+                    min={minAmount ?? 0}
+                    placeholder={`Enter amount in ${selectedCrypto}`}
+                    disabled={isDisabled}
+                    value={stringValue}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value)}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
               </FormControl>
               <FormDescription>
                 Funds must be sent from an address you control. Deposits are credited after admin
@@ -147,7 +153,8 @@ export function DepositForm({ wallets, minimums }: DepositFormProps) {
               </FormDescription>
               <FormMessage />
             </FormItem>
-          )}
+            );
+          }}
         />
 
         <FormField

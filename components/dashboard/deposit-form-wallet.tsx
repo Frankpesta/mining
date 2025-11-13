@@ -83,15 +83,19 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
   // Auto-submit deposit request when transaction is confirmed
   useEffect(() => {
     if (isConfirmed && transactionHash && submittedTxHash !== transactionHash) {
-      const amount = parseFloat(form.getValues("amount") || "0");
+      const amountValue = form.getValues("amount");
+      const amount: number = typeof amountValue === "string" 
+        ? parseFloat(amountValue || "0") 
+        : (typeof amountValue === "number" ? amountValue : 0);
       if (amount > 0 && transactionHash) {
-        setSubmittedTxHash(transactionHash);
+        const txHash = transactionHash; // Capture for type safety in async callback
+        setSubmittedTxHash(txHash);
         
         startSubmit(async () => {
           const response = await submitDepositRequest({
             crypto: selectedCrypto,
             amount,
-            txHash: transactionHash,
+            txHash,
           });
 
           if (response.success) {
@@ -130,10 +134,14 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
     try {
       if (values.crypto === "ETH") {
         const tx = prepareDepositTransaction(selectedWallet.address, values.amount, values.crypto);
-        sendTransaction({
-          to: tx.to,
-          value: tx.value,
-        });
+        if ("value" in tx) {
+          sendTransaction({
+            to: tx.to,
+            value: tx.value,
+          });
+        } else {
+          throw new Error("Invalid transaction format for ETH");
+        }
       } else {
         const tokenAddress = values.crypto === "USDT" 
           ? "0xdAC17F958D2ee523a2206206994597C13D831ec7"
@@ -328,27 +336,36 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
           <FormField
             control={form.control}
             name="amount"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Amount</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
-                    step="any"
-                    min={minAmount ?? 0}
-                    placeholder={`Enter amount in ${selectedCrypto}`}
-                    disabled={isDisabled || isLoading}
-                  />
-                </FormControl>
-                <FormDescription>
-                  {isConnected
-                    ? "Click deposit to send transaction directly from your wallet"
-                    : "Funds must be sent from an address you control. Deposits are credited after admin review."}
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
+            render={({ field }) => {
+              const stringValue: string = typeof field.value === "string" ? field.value : (field.value?.toString() ?? "");
+              return (
+                <FormItem>
+                  <FormLabel>Amount</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...({
+                        type: "number",
+                        step: "any",
+                        min: minAmount ?? 0,
+                        placeholder: `Enter amount in ${selectedCrypto}`,
+                        disabled: isDisabled || isLoading,
+                        value: stringValue,
+                        onChange: (e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value),
+                        onBlur: field.onBlur,
+                        name: field.name,
+                        ref: field.ref,
+                      } as React.InputHTMLAttributes<HTMLInputElement>)}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {isConnected
+                      ? "Click deposit to send transaction directly from your wallet"
+                      : "Funds must be sent from an address you control. Deposits are credited after admin review."}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
           />
 
           {!isConnected && (

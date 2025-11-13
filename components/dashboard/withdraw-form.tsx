@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useEffect, useMemo, useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -140,25 +141,32 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
         <FormField
           control={form.control}
           name="amount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Amount</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  type="number"
-                  step="any"
-                  min={minimum}
-                  max={available}
-                  placeholder={`Enter amount in ${crypto}`}
-                />
+          render={({ field }) => {
+            const stringValue: string = typeof field.value === "string" ? field.value : (field.value?.toString() ?? "");
+            return (
+              <FormItem>
+                <FormLabel>Amount</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    step="any"
+                    min={minimum}
+                    max={available}
+                    placeholder={`Enter amount in ${crypto}`}
+                    value={stringValue}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value)}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
               </FormControl>
               <FormDescription>
                 Available: {available.toLocaleString()} {crypto}
               </FormDescription>
               <FormMessage />
             </FormItem>
-          )}
+            );
+          }}
         />
 
         <FormField
