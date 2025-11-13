@@ -1,7 +1,8 @@
 import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Id, Doc } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 
 type Crypto = "ETH" | "USDT" | "USDC";
 
@@ -149,14 +150,9 @@ export const updateDepositStatus = mutation({
 });
 
 async function withUserEmail(
-  ctx: Parameters<typeof listAdminDeposits["handler"]>[0],
-  deposits: Array<
-    {
-      _id: Id<"deposits">;
-      userId: Id<"users">;
-    } & Record<string, any>
-  >,
-) {
+  ctx: QueryCtx,
+  deposits: Array<Doc<"deposits">>,
+): Promise<Array<Doc<"deposits"> & { userEmail: string | null }>> {
   const uniqueUserIds = Array.from(new Set(deposits.map((deposit) => deposit.userId)));
   const users = await Promise.all(uniqueUserIds.map((userId) => ctx.db.get(userId)));
   const emailMap = new Map<Id<"users">, string>();
