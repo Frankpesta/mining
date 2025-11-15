@@ -56,17 +56,10 @@ export function ReferralManagement({
           referralId,
           adminId,
         });
-        toast({
-          title: "Bonus awarded",
-          description: "Referral bonus has been awarded successfully.",
-        });
+        toast.success("Referral bonus has been awarded successfully.");
         window.location.reload();
       } catch (error) {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to award bonus",
-          variant: "destructive",
-        });
+        toast.error(error instanceof Error ? error.message : "Failed to award bonus");
       } finally {
         setProcessingId(null);
       }

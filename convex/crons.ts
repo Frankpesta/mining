@@ -1,7 +1,6 @@
 import { internalMutation } from "./_generated/server";
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
-import { api } from "./_generated/api";
 
 /**
  * Internal mutation to process mining operations
@@ -39,8 +38,8 @@ export const processMiningOperationsMutation = internalMutation({
         if (user) {
           const coin = operation.coin;
           
-          // Get real-time price for the coin
-          const coinPrice = await ctx.runQuery(api.prices.getCoinPrice, { coin });
+          // Get real-time price for the coin (using action since mutations can't use fetch)
+          const coinPrice = await ctx.runAction(internal.prices.getCoinPriceAction, { coin });
           
           // Convert USD earnings to coin amount
           const finalEarningsCoin = coinPrice > 0 ? finalEarningsUSD / coinPrice : 0;
@@ -112,8 +111,8 @@ export const processMiningOperationsMutation = internalMutation({
       const elapsedDays = elapsedMs / (24 * 60 * 60 * 1000);
       const expectedEarningsUSD = operation.currentRate * elapsedDays;
 
-      // Get real-time price for the coin
-      const coinPrice = await ctx.runQuery(api.prices.getCoinPrice, { coin: operation.coin });
+      // Get real-time price for the coin (using action since mutations can't use fetch)
+      const coinPrice = await ctx.runAction(internal.prices.getCoinPriceAction, { coin: operation.coin });
       
       // Convert USD earnings to coin amount
       const expectedEarningsCoin = coinPrice > 0 ? expectedEarningsUSD / coinPrice : 0;

@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { api } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 export const listUserMiningOperations = query({
   args: {
@@ -161,8 +161,8 @@ export const updateMiningOperationEarnings = mutation({
     const balanceDeltaCoin = args.totalMined - operation.totalMined;
 
     if (balanceDeltaCoin > 0) {
-      // Get real-time price for the coin
-      const coinPrice = await ctx.runQuery(api.prices.getCoinPrice, { coin });
+      // Get real-time price for the coin (using action since mutations can't use fetch)
+      const coinPrice = await ctx.runAction(internal.prices.getCoinPriceAction, { coin });
 
       // Mining earnings are paid out to platform balance for withdrawal
       // Update platform balance with the coin being mined

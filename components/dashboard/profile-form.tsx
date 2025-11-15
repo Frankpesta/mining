@@ -71,20 +71,12 @@ export function ProfileForm({
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      toast({
-        title: "Invalid file",
-        description: "Please select an image file",
-        variant: "destructive",
-      });
+      toast.error("Please select an image file");
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please select an image smaller than 5MB",
-        variant: "destructive",
-      });
+      toast.error("Please select an image smaller than 5MB");
       return;
     }
 
@@ -105,23 +97,16 @@ export function ProfileForm({
       // Update profile with new picture
       await convex.mutation(api.profiles.updateProfilePicture, {
         userId,
-        profilePictureId: storageId,
+        profilePictureId: storageId as Id<"_storage">,
       });
 
       // Get new URL
       const newUrl = await convex.query(api.profiles.getProfileWithPicture, { userId });
       setProfilePictureUrl(newUrl?.profilePictureUrl || null);
 
-      toast({
-        title: "Profile picture updated",
-        description: "Your profile picture has been updated successfully.",
-      });
+      toast.success("Your profile picture has been updated successfully.");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload image",
-        variant: "destructive",
-      });
+      toast.error(error instanceof Error ? error.message : "Failed to upload image");
     } finally {
       setUploading(false);
     }
@@ -149,16 +134,9 @@ export function ProfileForm({
           bio: formData.bio || undefined,
         });
 
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully.",
-        });
+        toast.success("Your profile has been updated successfully.");
       } catch (error) {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to update profile",
-          variant: "destructive",
-        });
+        toast.error(error instanceof Error ? error.message : "Failed to update profile");
       }
     });
   };

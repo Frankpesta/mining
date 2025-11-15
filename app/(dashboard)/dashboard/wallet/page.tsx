@@ -45,9 +45,16 @@ export default async function WalletPage() {
             {/* Display all coins in platform balance */}
             {user?.platformBalance && (
               <>
-                {Object.entries(user.platformBalance as Record<string, number>)
-                  .filter(([key, value]) => key !== "others" && value > 0)
+                {Object.entries(user.platformBalance)
+                  .filter(([key, value]) => {
+                    if (key === "others") return false;
+                    return typeof value === "number" && value > 0;
+                  })
                   .map(([coin, value]) => (
+                    <BalanceRow key={coin} label={coin} value={value as number} />
+                  ))}
+                {user.platformBalance.others &&
+                  Object.entries(user.platformBalance.others).map(([coin, value]) => (
                     <BalanceRow key={coin} label={coin} value={value} />
                   ))}
               </>

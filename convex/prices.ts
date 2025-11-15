@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { query, action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
@@ -105,7 +105,7 @@ export const getCryptoPrices = query({
 });
 
 /**
- * Get price for a single coin
+ * Get price for a single coin (query - for client-side use)
  */
 export const getCoinPrice = query({
   args: {
@@ -114,6 +114,94 @@ export const getCoinPrice = query({
   handler: async (ctx, args) => {
     const prices = await getCryptoPrices(ctx, { coins: [args.coin] });
     return prices[args.coin.toUpperCase()] ?? 0;
+  },
+});
+
+/**
+ * Get price for a single coin (action - for use in mutations)
+ * This uses fetch which is only allowed in actions
+ */
+export const getCoinPriceAction = action({
+  args: {
+    coin: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const coinId = COIN_ID_MAP[args.coin.toUpperCase()];
+    if (!coinId) {
+      return 0;
+    }
+
+    try {
+      const response = await fetch(
+        `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        console.error(`CoinGecko API failed: ${response.status}`);
+        return 0;
+      }
+
+      const data = await response.json();
+      return data[coinId]?.usd ?? 0;
+    } catch (error) {
+      console.error("Error fetching crypto price:", error);
+      return 0;
+    }
+  },
+});
+
+/**
+ * Get prices for multiple coins (action - for use in mutations)
+ */
+export const getCryptoPricesAction = action({
+  args: {
+    coins: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const coinIds = args.coins
+      .map((coin) => COIN_ID_MAP[coin.toUpperCase()])
+      .filter(Boolean)
+      .join(",");
+
+    if (!coinIds) {
+      return {};
+    }
+
+    try {
+      const response = await fetch(
+        `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        console.error(`CoinGecko API failed: ${response.status}`);
+        return {};
+      }
+
+      const data = await response.json();
+      const prices: Record<string, number> = {};
+
+      // Map CoinGecko IDs back to coin symbols
+      for (const [coin, coinId] of Object.entries(COIN_ID_MAP)) {
+        if (data[coinId]?.usd) {
+          prices[coin] = data[coinId].usd;
+        }
+      }
+
+      return prices;
+    } catch (error) {
+      console.error("Error fetching crypto prices:", error);
+      return {};
+    }
   },
 });
 

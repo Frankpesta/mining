@@ -42,16 +42,9 @@ export function ReferralSettingsForm({
           isEnabled: settings.isEnabled,
           adminId,
         });
-        toast({
-          title: "Settings updated",
-          description: "Referral settings have been updated successfully.",
-        });
+        toast.success("Referral settings have been updated successfully.");
       } catch (error) {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to update settings",
-          variant: "destructive",
-        });
+        toast.error(error instanceof Error ? error.message : "Failed to update settings");
       }
     });
   };
