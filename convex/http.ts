@@ -16,7 +16,8 @@ const processMiningOperationsAction = httpAction(async (ctx, request) => {
   // }
 
   try {
-    const result = await ctx.runMutation(internal.crons.processMiningOperationsMutation, {});
+    await ctx.runAction(internal.crons.processMiningOperationsAction, {});
+    const result = { success: true };
     
     return new Response(
       JSON.stringify({

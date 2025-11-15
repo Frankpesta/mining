@@ -1,14 +1,19 @@
-import { internalMutation } from "./_generated/server";
+import { internalMutation, internalAction } from "./_generated/server";
 import { cronJobs } from "convex/server";
 import { internal } from "./_generated/api";
+import { v } from "convex/values";
 
 /**
  * Internal mutation to process mining operations
  * This processes all active mining operations and updates earnings
+ * Receives prices as a parameter since mutations can't fetch
  */
 export const processMiningOperationsMutation = internalMutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    prices: v.optional(v.record(v.string(), v.number())),
+  },
+  handler: async (ctx, args) => {
+    const prices = args.prices ?? {};
     const now = Date.now();
     // Get all active operations (we'll filter by status in the loop since index might not exist)
     const allOperations = await ctx.db.query("miningOperations").collect();
@@ -38,8 +43,8 @@ export const processMiningOperationsMutation = internalMutation({
         if (user) {
           const coin = operation.coin;
           
-          // Get real-time price for the coin (using action since mutations can't use fetch)
-          const coinPrice = await ctx.runAction(internal.prices.getCoinPriceAction, { coin });
+          // Get real-time price for the coin (from prices map passed from action)
+          const coinPrice = prices[coin.toUpperCase()] ?? 0;
           
           // Convert USD earnings to coin amount
           const finalEarningsCoin = coinPrice > 0 ? finalEarningsUSD / coinPrice : 0;
@@ -111,8 +116,8 @@ export const processMiningOperationsMutation = internalMutation({
       const elapsedDays = elapsedMs / (24 * 60 * 60 * 1000);
       const expectedEarningsUSD = operation.currentRate * elapsedDays;
 
-      // Get real-time price for the coin (using action since mutations can't use fetch)
-      const coinPrice = await ctx.runAction(internal.prices.getCoinPriceAction, { coin: operation.coin });
+      // Get real-time price for the coin (from prices map passed from action)
+      const coinPrice = prices[operation.coin.toUpperCase()] ?? 0;
       
       // Convert USD earnings to coin amount
       const expectedEarningsCoin = coinPrice > 0 ? expectedEarningsUSD / coinPrice : 0;
@@ -188,6 +193,29 @@ export const processMiningOperationsMutation = internalMutation({
 });
 
 /**
+ * Internal action to process mining operations
+ * This fetches prices and then calls the mutation
+ */
+export const processMiningOperationsAction = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // Fetch prices for all supported coins (we'll filter in the mutation)
+    // This is more efficient than fetching per-operation
+    const supportedCoins = ["BTC", "ETH", "SOL", "LTC", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI", "USDT", "USDC"];
+    
+    // Fetch prices for all coins
+    const prices = await ctx.runAction(internal.prices.getCryptoPricesAction, {
+      coins: supportedCoins,
+    });
+    
+    // Call the mutation with prices
+    await ctx.runMutation(internal.crons.processMiningOperationsMutation, {
+      prices,
+    });
+  },
+});
+
+/**
  * Convex cron jobs configuration
  * This schedules the mining operations processor to run every hour
  */
@@ -198,8 +226,7 @@ crons.hourly(
   {
     minuteUTC: 0, // Run at minute 0 of every hour (UTC)
   },
-  internal.crons.processMiningOperationsMutation,
+  internal.crons.processMiningOperationsAction,
 );
 
 export default crons;
-
