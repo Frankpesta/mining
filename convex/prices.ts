@@ -54,9 +54,9 @@ const COIN_ID_MAP: Record<string, string> = {
 };
 
 /**
- * Get price for a single coin (query - for client-side use)
- * Note: Queries can't use fetch, so this returns 0 and should be called from client-side
- * where actions can be used instead
+ * Get price for a single coin (query - deprecated, use action instead)
+ * Note: Queries can't use fetch, so this returns 0
+ * Client-side code should use getCoinPriceAction instead
  */
 export const getCoinPrice = query({
   args: {
