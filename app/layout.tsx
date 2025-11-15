@@ -3,6 +3,7 @@ import { Manrope, Noto_Sans } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { WalletProvider } from "@/components/providers/wallet-provider";
+import { ConvexProvider } from "@/components/providers/convex-provider";
 import { Toaster } from "@/components/ui/toaster";
 
 import "./globals.css";
@@ -39,12 +40,14 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <WalletProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <div className="min-h-screen bg-background text-foreground">{children}</div>
-            <Toaster />
-          </ThemeProvider>
-        </WalletProvider>
+        <ConvexProvider>
+          <WalletProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <div className="min-h-screen bg-background text-foreground">{children}</div>
+              <Toaster />
+            </ThemeProvider>
+          </WalletProvider>
+        </ConvexProvider>
       </body>
     </html>
   );

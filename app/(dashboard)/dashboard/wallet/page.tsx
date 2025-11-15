@@ -7,15 +7,24 @@ import {
 } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
 import { formatCurrency } from "@/lib/utils";
+import { getConvexClient } from "@/lib/convex/client";
+import { api } from "@/convex/_generated/api";
 
 export default async function WalletPage() {
   const current = await getCurrentUser();
   const user = current?.user;
 
-  const platformBalanceUSD =
-    (user?.platformBalance.ETH ?? 0) +
-    (user?.platformBalance.USDT ?? 0) +
-    (user?.platformBalance.USDC ?? 0);
+  const convex = getConvexClient();
+  const platformBalanceUSD = user
+    ? await convex.query(api.wallet.calculatePlatformBalanceUSD, {
+        userId: user._id,
+      })
+    : 0;
+  const miningBalanceUSD = user
+    ? await convex.query(api.wallet.calculateMiningBalanceUSD, {
+        userId: user._id,
+      })
+    : 0;
 
   return (
     <div className="space-y-6">
@@ -33,11 +42,18 @@ export default async function WalletPage() {
             <CardDescription>Spendable balance for purchases and withdrawals.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <BalanceRow label="ETH" value={user?.platformBalance.ETH ?? 0} />
-            <BalanceRow label="USDT" value={user?.platformBalance.USDT ?? 0} />
-            <BalanceRow label="USDC" value={user?.platformBalance.USDC ?? 0} />
+            {/* Display all coins in platform balance */}
+            {user?.platformBalance && (
+              <>
+                {Object.entries(user.platformBalance as Record<string, number>)
+                  .filter(([key, value]) => key !== "others" && value > 0)
+                  .map(([coin, value]) => (
+                    <BalanceRow key={coin} label={coin} value={value} />
+                  ))}
+              </>
+            )}
             <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs uppercase tracking-wide text-muted-foreground">
-              <span>Total (USD est.)</span>
+              <span>Total (USD)</span>
               <span className="text-sm font-semibold">{formatCurrency(platformBalanceUSD)}</span>
             </div>
           </CardContent>
@@ -49,14 +65,28 @@ export default async function WalletPage() {
             <CardDescription>Realized rewards awaiting withdrawal.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <BalanceRow label="BTC" value={user?.miningBalance.BTC ?? 0} />
-            <BalanceRow label="ETH" value={user?.miningBalance.ETH ?? 0} />
-            <BalanceRow label="LTC" value={user?.miningBalance.LTC ?? 0} />
-            {user?.miningBalance.others
-              ? Object.entries(user.miningBalance.others).map(([coin, value]) => (
-                  <BalanceRow key={coin} label={coin} value={value} />
-                ))
-              : null}
+            {/* Display all coins in mining balance */}
+            {user?.miningBalance && (
+              <>
+                {Object.entries(user.miningBalance as Record<string, number | Record<string, number> | undefined>)
+                  .filter(([key, value]) => {
+                    if (key === "others") return false;
+                    return typeof value === "number" && value > 0;
+                  })
+                  .map(([coin, value]) => (
+                    <BalanceRow key={coin} label={coin} value={value as number} />
+                  ))}
+                {user.miningBalance.others
+                  ? Object.entries(user.miningBalance.others).map(([coin, value]) => (
+                      <BalanceRow key={coin} label={coin} value={value} />
+                    ))
+                  : null}
+              </>
+            )}
+            <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs uppercase tracking-wide text-muted-foreground">
+              <span>Total (USD)</span>
+              <span className="text-sm font-semibold">{formatCurrency(miningBalanceUSD)}</span>
+            </div>
           </CardContent>
         </Card>
       </section>

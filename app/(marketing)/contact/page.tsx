@@ -6,19 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 const offices = [
   {
-    city: "Austin, USA",
-    address: "500 W 2nd Street, Suite 1900, Austin, TX 78701",
-    phone: "+1 (512) 555-1610",
-  },
-  {
-    city: "Zürich, Switzerland",
-    address: "Bleicherweg 10, 8002 Zürich, Switzerland",
-    phone: "+41 43 555 28 40",
-  },
-  {
-    city: "Singapore",
-    address: "6 Battery Road, Level 31, Singapore 049909",
-    phone: "+65 3129 7278",
+    city: "London, United Kingdom",
+    address: "126, 126a Oxford St, London W1D 2HT, United Kingdom",
   },
 ];
 
@@ -94,7 +83,6 @@ export default function ContactPage() {
                 <div key={office.city}>
                   <p className="text-sm font-semibold text-foreground">{office.city}</p>
                   <p>{office.address}</p>
-                  <p>{office.phone}</p>
                 </div>
               ))}
             </div>

@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { api } from "./_generated/api";
 
 export const listUserMiningOperations = query({
   args: {
@@ -157,26 +158,52 @@ export const updateMiningOperationEarnings = mutation({
     }
 
     const coin = operation.coin;
-    const balanceDelta = args.totalMined - operation.totalMined;
+    const balanceDeltaCoin = args.totalMined - operation.totalMined;
 
-    if (coin === "BTC" || coin === "ETH" || coin === "LTC") {
-      const coreCoin = coin as "BTC" | "ETH" | "LTC";
-      await ctx.db.patch(operation.userId, {
-        miningBalance: {
-          ...user.miningBalance,
-          [coreCoin]: (user.miningBalance[coreCoin] ?? 0) + balanceDelta,
-        },
-      });
-    } else {
-      await ctx.db.patch(operation.userId, {
-        miningBalance: {
-          ...user.miningBalance,
-          others: {
-            ...user.miningBalance.others,
-            [coin]: (user.miningBalance.others?.[coin] ?? 0) + balanceDelta,
+    if (balanceDeltaCoin > 0) {
+      // Get real-time price for the coin
+      const coinPrice = await ctx.runQuery(api.prices.getCoinPrice, { coin });
+
+      // Mining earnings are paid out to platform balance for withdrawal
+      // Update platform balance with the coin being mined
+      // For stablecoins (USDT, USDC), use 1:1 conversion
+      if (coin === "USDT" || coin === "USDC") {
+        const balanceDeltaUSD = balanceDeltaCoin * coinPrice;
+        await ctx.db.patch(operation.userId, {
+          platformBalance: {
+            ...user.platformBalance,
+            [coin]: (user.platformBalance[coin as "USDT" | "USDC"] ?? 0) + balanceDeltaUSD,
           },
-        },
-      });
+        });
+      } else {
+        // For other coins, add to platform balance
+        const currentBalance = (user.platformBalance as any)[coin] ?? 0;
+        await ctx.db.patch(operation.userId, {
+          platformBalance: {
+            ...user.platformBalance,
+            [coin]: currentBalance + balanceDeltaCoin,
+          } as any,
+        });
+      }
+
+      // Also update mining balance for tracking purposes
+      if (coin === "BTC" || coin === "ETH" || coin === "LTC") {
+        const coreCoin = coin as "BTC" | "ETH" | "LTC";
+        await ctx.db.patch(operation.userId, {
+          miningBalance: {
+            ...user.miningBalance,
+            [coreCoin]: (user.miningBalance[coreCoin] ?? 0) + balanceDeltaCoin,
+          },
+        });
+      } else {
+        const currentMining = (user.miningBalance as any)[coin] ?? 0;
+        await ctx.db.patch(operation.userId, {
+          miningBalance: {
+            ...user.miningBalance,
+            [coin]: currentMining + balanceDeltaCoin,
+          } as any,
+        });
+      }
     }
   },
 });

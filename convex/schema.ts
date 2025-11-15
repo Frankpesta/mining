@@ -6,6 +6,20 @@ const platformBalance = () =>
     ETH: v.number(),
     USDT: v.number(),
     USDC: v.number(),
+    BTC: v.optional(v.number()),
+    SOL: v.optional(v.number()),
+    LTC: v.optional(v.number()),
+    BNB: v.optional(v.number()),
+    ADA: v.optional(v.number()),
+    XRP: v.optional(v.number()),
+    DOGE: v.optional(v.number()),
+    DOT: v.optional(v.number()),
+    MATIC: v.optional(v.number()),
+    AVAX: v.optional(v.number()),
+    ATOM: v.optional(v.number()),
+    LINK: v.optional(v.number()),
+    UNI: v.optional(v.number()),
+    others: v.optional(v.record(v.string(), v.number())),
   });
 
 const miningBalance = () =>
@@ -13,6 +27,17 @@ const miningBalance = () =>
     BTC: v.number(),
     ETH: v.number(),
     LTC: v.number(),
+    SOL: v.optional(v.number()),
+    BNB: v.optional(v.number()),
+    ADA: v.optional(v.number()),
+    XRP: v.optional(v.number()),
+    DOGE: v.optional(v.number()),
+    DOT: v.optional(v.number()),
+    MATIC: v.optional(v.number()),
+    AVAX: v.optional(v.number()),
+    ATOM: v.optional(v.number()),
+    LINK: v.optional(v.number()),
+    UNI: v.optional(v.number()),
     others: v.optional(v.record(v.string(), v.number())),
   });
 
@@ -31,10 +56,16 @@ export default defineSchema({
     isSuspended: v.boolean(),
     createdAt: v.number(),
     lastLogin: v.optional(v.number()),
+    referralCode: v.optional(v.string()),
+    referredBy: v.optional(v.id("users")),
+    referralBonusEarned: v.optional(v.number()),
+    totalReferrals: v.optional(v.number()),
   })
     .index("by_email", ["email"])
     .index("by_verification_token", ["verificationToken"])
-    .index("by_reset_token", ["resetToken"]),
+    .index("by_reset_token", ["resetToken"])
+    .index("by_referral_code", ["referralCode"])
+    .index("by_referred_by", ["referredBy"]),
 
   sessions: defineTable({
     userId: v.id("users"),
@@ -140,5 +171,41 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),
+
+  referralSettings: defineTable({
+    referralBonusAmount: v.number(),
+    isEnabled: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }),
+
+  referrals: defineTable({
+    referrerId: v.id("users"),
+    referredUserId: v.id("users"),
+    bonusAmount: v.number(),
+    status: v.union(v.literal("pending"), v.literal("awarded"), v.literal("cancelled")),
+    awardedAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_referrer", ["referrerId"])
+    .index("by_referred_user", ["referredUserId"]),
+
+  profiles: defineTable({
+    userId: v.id("users"),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    country: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    dateOfBirth: v.optional(v.number()),
+    bio: v.optional(v.string()),
+    profilePictureId: v.optional(v.id("_storage")),
+    updatedAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"]),
 });
 

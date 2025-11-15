@@ -72,6 +72,7 @@ export async function signupAction(
   const payload = {
     email: String(formData.get("email") ?? ""),
     password: String(formData.get("password") ?? ""),
+    referralCode: String(formData.get("referralCode") ?? "").trim() || undefined,
   };
 
   const parsed = SignupSchema.safeParse(payload);
@@ -105,6 +106,7 @@ export async function signupAction(
       passwordHash,
       verificationToken,
       verificationTokenExpiresAt: verificationExpiresAt,
+      referralCode: payload.referralCode,
     });
 
     await sendVerificationEmail({

@@ -13,6 +13,7 @@ const navigation = [
   { href: "/dashboard/activity", label: "Activity", icon: "chart-line" },
   { href: "/dashboard/wallet", label: "Wallet", icon: "coins" },
   { href: "/dashboard/withdraw", label: "Withdraw", icon: "waypoints" },
+  { href: "/dashboard/profile", label: "Profile", icon: "users" },
 ] satisfies SidebarNavItem[];
 
 export default async function DashboardLayout({

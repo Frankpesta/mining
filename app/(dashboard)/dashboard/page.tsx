@@ -7,9 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { ReferralCard } from "@/components/dashboard/referral-card";
 
 const currencyLabels: Record<"ETH" | "USDT" | "USDC", string> = {
   ETH: "Ethereum",
@@ -50,6 +52,11 @@ export default async function DashboardOverviewPage() {
       label: "Pending withdrawals",
       value: summary.metrics.pendingWithdrawals.toLocaleString(),
       hint: "Awaiting admin review",
+    },
+    {
+      label: "Referral bonus earned",
+      value: formatCurrency(summary.referral.referralBonusEarned),
+      hint: `${summary.referral.awardedReferrals} successful referrals`,
     },
   ];
 
@@ -201,6 +208,10 @@ export default async function DashboardOverviewPage() {
             )}
           </CardContent>
         </Card>
+      </section>
+
+      <section>
+        <ReferralCard referral={summary.referral} />
       </section>
     </div>
   );

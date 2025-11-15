@@ -11,6 +11,8 @@ const navigation = [
   { href: "/admin/withdrawals", label: "Withdrawals", icon: "compass" },
   { href: "/admin/plans", label: "Plans", icon: "bar-chart-3" },
   { href: "/admin/users", label: "Users", icon: "users" },
+  { href: "/admin/profiles", label: "Profiles", icon: "users" },
+  { href: "/admin/referrals", label: "Referrals", icon: "activity" },
   { href: "/admin/mining-operations", label: "Mining Ops", icon: "activity" },
   { href: "/admin/analytics", label: "Analytics", icon: "bar-chart-3" },
   { href: "/admin/settings", label: "Settings", icon: "settings" },

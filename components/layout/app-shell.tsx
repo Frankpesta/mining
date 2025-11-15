@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Loader2 } from "lucide-react";
+import { useFormStatus } from "react-dom";
 
 import { SidebarNav, type SidebarNavItem } from "@/components/dashboard/sidebar-nav";
 import { Button } from "@/components/ui/button";
@@ -71,9 +72,7 @@ export function AppShell({
         <p className="font-medium text-sidebar-foreground">{user.email}</p>
         <p className="capitalize">{user.role}</p>
         <form action={signOutAction} className="mt-3">
-          <Button type="submit" variant="outline" size="sm" className="w-full text-xs">
-            Sign out
-          </Button>
+          <SignOutButton />
         </form>
       </div>
     </div>
@@ -130,6 +129,29 @@ export function AppShell({
         </footer>
       </div>
     </div>
+  );
+}
+
+function SignOutButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <Button
+      type="submit"
+      variant="outline"
+      size="sm"
+      className="w-full text-xs"
+      disabled={pending}
+    >
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+          Signing out...
+        </>
+      ) : (
+        "Sign out"
+      )}
+    </Button>
   );
 }
 

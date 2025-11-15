@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useSearchParams } from "next/navigation";
 
 import { signupAction } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ const initialState: AuthFormState = {
 
 export function SignupForm() {
   const [state, formAction] = useActionState(signupAction, initialState);
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get("ref");
 
   return (
     <form action={formAction} className="space-y-6">
@@ -42,6 +45,15 @@ export function SignupForm() {
         placeholder="Strong password"
         type="password"
         name="password"
+      />
+      <Field
+        error={state.fieldErrors?.referralCode}
+        id="referralCode"
+        label="Referral Code (Optional)"
+        placeholder="Enter referral code"
+        type="text"
+        name="referralCode"
+        defaultValue={refCode || ""}
       />
 
       {state.message ? (

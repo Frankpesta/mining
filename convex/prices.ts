@@ -1,0 +1,120 @@
+import { query } from "./_generated/server";
+import { v } from "convex/values";
+import { internal } from "./_generated/api";
+
+/**
+ * Supported mainstream coins for mining and platform balance
+ */
+export const MAINSTREAM_COINS = [
+  "BTC",
+  "ETH",
+  "SOL", // Solana
+  "LTC",
+  "BNB", // Binance Coin
+  "ADA", // Cardano
+  "XRP", // Ripple
+  "DOGE", // Dogecoin
+  "DOT", // Polkadot
+  "MATIC", // Polygon
+  "AVAX", // Avalanche
+  "ATOM", // Cosmos
+  "LINK", // Chainlink
+  "UNI", // Uniswap
+  "USDT",
+  "USDC",
+] as const;
+
+export type MainstreamCoin = (typeof MAINSTREAM_COINS)[number];
+
+/**
+ * CoinGecko API endpoint for price data
+ */
+const COINGECKO_API = "https://api.coingecko.com/api/v3";
+
+/**
+ * Map coin symbols to CoinGecko IDs
+ */
+const COIN_ID_MAP: Record<string, string> = {
+  BTC: "bitcoin",
+  ETH: "ethereum",
+  SOL: "solana",
+  LTC: "litecoin",
+  BNB: "binancecoin",
+  ADA: "cardano",
+  XRP: "ripple",
+  DOGE: "dogecoin",
+  DOT: "polkadot",
+  MATIC: "matic-network",
+  AVAX: "avalanche-2",
+  ATOM: "cosmos",
+  LINK: "chainlink",
+  UNI: "uniswap",
+  USDT: "tether",
+  USDC: "usd-coin",
+};
+
+/**
+ * Get real-time prices for multiple coins
+ * Returns prices in USD
+ */
+export const getCryptoPrices = query({
+  args: {
+    coins: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const coinIds = args.coins
+      .map((coin) => COIN_ID_MAP[coin.toUpperCase()])
+      .filter(Boolean)
+      .join(",");
+
+    if (!coinIds) {
+      return {};
+    }
+
+    try {
+      const response = await fetch(
+        `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        console.error(`CoinGecko API failed: ${response.status}`);
+        return {};
+      }
+
+      const data = await response.json();
+      const prices: Record<string, number> = {};
+
+      // Map CoinGecko IDs back to coin symbols
+      for (const [coin, coinId] of Object.entries(COIN_ID_MAP)) {
+        if (data[coinId]?.usd) {
+          prices[coin] = data[coinId].usd;
+        }
+      }
+
+      return prices;
+    } catch (error) {
+      console.error("Error fetching crypto prices:", error);
+      return {};
+    }
+  },
+});
+
+/**
+ * Get price for a single coin
+ */
+export const getCoinPrice = query({
+  args: {
+    coin: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const prices = await getCryptoPrices(ctx, { coins: [args.coin] });
+    return prices[args.coin.toUpperCase()] ?? 0;
+  },
+});
+
+

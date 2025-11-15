@@ -25,12 +25,22 @@ export const getUserById = query({
   },
 });
 
+function generateReferralCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 export const createUser = mutation({
   args: {
     email: v.string(),
     passwordHash: v.string(),
     verificationToken: v.string(),
     verificationTokenExpiresAt: v.number(),
+    referralCode: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const email = normalizeEmail(args.email);
@@ -43,8 +53,35 @@ export const createUser = mutation({
       throw new ConvexError("Email is already registered");
     }
 
+    // Generate unique referral code
+    let referralCode = generateReferralCode();
+    let existingCode = await ctx.db
+      .query("users")
+      .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+      .first();
+    
+    while (existingCode) {
+      referralCode = generateReferralCode();
+      existingCode = await ctx.db
+        .query("users")
+        .withIndex("by_referral_code", (q) => q.eq("referralCode", referralCode))
+        .first();
+    }
+
+    // Find referrer if referral code provided
+    let referredBy: Id<"users"> | undefined = undefined;
+    if (args.referralCode) {
+      const referrer = await ctx.db
+        .query("users")
+        .withIndex("by_referral_code", (q) => q.eq("referralCode", args.referralCode))
+        .first();
+      if (referrer) {
+        referredBy = referrer._id;
+      }
+    }
+
     const now = Date.now();
-    return ctx.db.insert("users", {
+    const userId = await ctx.db.insert("users", {
       email,
       passwordHash: args.passwordHash,
       role: "user",
@@ -58,7 +95,35 @@ export const createUser = mutation({
       isSuspended: false,
       createdAt: now,
       lastLogin: undefined,
+      referralCode: referralCode,
+      referredBy: referredBy,
+      referralBonusEarned: 0,
+      totalReferrals: 0,
     });
+
+    // Create referral record if referred
+    if (referredBy) {
+      const referralSettings = await ctx.db.query("referralSettings").first();
+      const bonusAmount = referralSettings?.referralBonusAmount ?? 20; // Default $20
+      
+      await ctx.db.insert("referrals", {
+        referrerId: referredBy,
+        referredUserId: userId,
+        bonusAmount,
+        status: "pending",
+        createdAt: now,
+      });
+
+      // Award bonus to referrer
+      const referrer = await ctx.db.get(referredBy);
+      if (referrer) {
+        await ctx.db.patch(referredBy, {
+          totalReferrals: (referrer.totalReferrals || 0) + 1,
+        });
+      }
+    }
+
+    return userId;
   },
 });
 
@@ -98,6 +163,39 @@ export const consumeVerificationToken = mutation({
       verificationToken: undefined,
       verificationTokenExpiresAt: undefined,
     });
+
+    // Award referral bonus if user was referred
+    if (user.referredBy) {
+      const referral = await ctx.db
+        .query("referrals")
+        .withIndex("by_referred_user", (q) => q.eq("referredUserId", user._id))
+        .first();
+      
+      if (referral && referral.status === "pending") {
+        const referralSettings = await ctx.db.query("referralSettings").first();
+        const isEnabled = referralSettings?.isEnabled ?? true;
+        
+        if (isEnabled) {
+          // Award bonus to referrer's platform balance (USDC)
+          const referrer = await ctx.db.get(user.referredBy);
+          if (referrer) {
+            await ctx.db.patch(user.referredBy, {
+              platformBalance: {
+                ...referrer.platformBalance,
+                USDC: referrer.platformBalance.USDC + referral.bonusAmount,
+              },
+              referralBonusEarned: (referrer.referralBonusEarned || 0) + referral.bonusAmount,
+            });
+
+            // Update referral status
+            await ctx.db.patch(referral._id, {
+              status: "awarded",
+              awardedAt: Date.now(),
+            });
+          }
+        }
+      }
+    }
 
     return user._id;
   },

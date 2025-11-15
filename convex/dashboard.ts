@@ -62,6 +62,18 @@ export const getUserDashboardSummary = query({
     const totalPlatformBalance = sumPlatformBalance(user.platformBalance);
     const totalMiningBalance = sumMiningBalance(user.miningBalance);
 
+    // Get referral stats
+    const referrals = await ctx.db
+      .query("referrals")
+      .withIndex("by_referrer", (q) => q.eq("referrerId", args.userId))
+      .collect();
+    
+    const totalReferrals = referrals.length;
+    const awardedReferrals = referrals.filter((r) => r.status === "awarded").length;
+    const totalBonusEarned = referrals
+      .filter((r) => r.status === "awarded")
+      .reduce((sum, r) => sum + r.bonusAmount, 0);
+
     return {
       user: {
         _id: user._id,
@@ -79,6 +91,13 @@ export const getUserDashboardSummary = query({
         platform: user.platformBalance,
         mining: user.miningBalance,
       },
+      referral: {
+        referralCode: user.referralCode || "",
+        totalReferrals,
+        awardedReferrals,
+        totalBonusEarned,
+        referralBonusEarned: user.referralBonusEarned || 0,
+      },
       recentDeposits,
       recentWithdrawals,
     };
@@ -92,6 +111,7 @@ export const getAdminDashboardSummary = query({
     const miningOperations = await ctx.db.query("miningOperations").collect();
     const deposits = await ctx.db.query("deposits").collect();
     const withdrawals = await ctx.db.query("withdrawals").collect();
+    const referrals = await ctx.db.query("referrals").collect();
 
     const totalPlatformBalance = users.reduce(
       (accumulator, user) => accumulator + sumPlatformBalance(user.platformBalance),
@@ -130,6 +150,48 @@ export const getAdminDashboardSummary = query({
         userEmail: userEmailById.get(withdrawal.userId as Id<"users">) ?? null,
       }));
 
+    // Calculate user growth over time (last 30 days)
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const userGrowth = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now - i * 24 * 60 * 60 * 1000);
+      const dateStart = new Date(date.setHours(0, 0, 0, 0)).getTime();
+      const dateEnd = dateStart + 24 * 60 * 60 * 1000;
+      const count = users.filter(
+        (u) => u.createdAt >= dateStart && u.createdAt < dateEnd,
+      ).length;
+      userGrowth.push({
+        date: new Date(dateStart).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        users: count,
+      });
+    }
+
+    // Calculate deposit/withdrawal trends
+    const depositTrends = [];
+    const withdrawalTrends = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(now - i * 24 * 60 * 60 * 1000);
+      const dateStart = new Date(date.setHours(0, 0, 0, 0)).getTime();
+      const dateEnd = dateStart + 24 * 60 * 60 * 1000;
+      const depositAmount = deposits
+        .filter((d) => d.createdAt >= dateStart && d.createdAt < dateEnd && d.status === "approved")
+        .reduce((sum, d) => sum + d.amount, 0);
+      const withdrawalAmount = withdrawals
+        .filter((w) => w.createdAt >= dateStart && w.createdAt < dateEnd && w.status === "completed")
+        .reduce((sum, w) => sum + w.amount, 0);
+      const dateLabel = new Date(dateStart).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      depositTrends.push({ date: dateLabel, amount: depositAmount });
+      withdrawalTrends.push({ date: dateLabel, amount: withdrawalAmount });
+    }
+
+    // Calculate referral stats
+    const totalReferrals = referrals.length;
+    const awardedReferrals = referrals.filter((r) => r.status === "awarded").length;
+    const totalReferralBonus = referrals
+      .filter((r) => r.status === "awarded")
+      .reduce((sum, r) => sum + r.bonusAmount, 0);
+
     return {
       metrics: {
         totalUsers: users.length,
@@ -138,9 +200,17 @@ export const getAdminDashboardSummary = query({
         pendingDeposits: pendingDeposits.length,
         pendingWithdrawals: pendingWithdrawals.length,
         activeOperations: activeOperations.length,
+        totalReferrals,
+        awardedReferrals,
+        totalReferralBonus,
       },
       recentDeposits,
       recentWithdrawals,
+      charts: {
+        userGrowth,
+        depositTrends,
+        withdrawalTrends,
+      },
     };
   },
 });

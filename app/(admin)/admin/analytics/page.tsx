@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency } from "@/lib/utils";
+import { AnalyticsCharts } from "@/components/admin/analytics-charts";
 
 export default async function AdminAnalyticsPage() {
   const convex = getConvexClient();
@@ -67,22 +68,53 @@ export default async function AdminAnalyticsPage() {
         </Card>
       </div>
 
-      <Card className="border-border/60 bg-card/80">
-        <CardHeader>
-          <CardTitle>Analytics dashboard</CardTitle>
-          <CardDescription>
-            Advanced charts and reports coming soon. Currently showing key platform metrics.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4 text-sm text-muted-foreground">
-            <p>• Revenue trends over time</p>
-            <p>• User growth charts</p>
-            <p>• Transaction volume analysis</p>
-            <p>• Mining profitability metrics</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-border/60 bg-card/80">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Pending deposits
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{summary.metrics.pendingDeposits}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card/80">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Pending withdrawals
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{summary.metrics.pendingWithdrawals}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card/80">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total referrals
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{summary.metrics.totalReferrals}</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card/80">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Referral bonus paid
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-semibold">{formatCurrency(summary.metrics.totalReferralBonus)}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <AnalyticsCharts charts={summary.charts} />
     </div>
   );
 }
