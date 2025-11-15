@@ -16,12 +16,12 @@ export default async function WalletPage() {
 
   const convex = getConvexClient();
   const platformBalanceUSD = user
-    ? await convex.query(api.wallet.calculatePlatformBalanceUSD, {
+    ? await convex.action(api.wallet.calculatePlatformBalanceUSD, {
         userId: user._id,
       })
     : 0;
   const miningBalanceUSD = user
-    ? await convex.query(api.wallet.calculateMiningBalanceUSD, {
+    ? await convex.action(api.wallet.calculateMiningBalanceUSD, {
         userId: user._id,
       })
     : 0;

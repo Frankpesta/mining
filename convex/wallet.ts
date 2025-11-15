@@ -4,13 +4,14 @@ import { api } from "./_generated/api";
 
 /**
  * Calculate total USD value of platform balance
+ * Uses action since we need to fetch prices
  */
-export const calculatePlatformBalanceUSD = query({
+export const calculatePlatformBalanceUSD = action({
   args: {
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
+    const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId });
     if (!user) {
       return 0;
     }
@@ -30,8 +31,8 @@ export const calculatePlatformBalanceUSD = query({
       return 0;
     }
 
-    // Get prices for all coins
-    const prices = await ctx.runQuery(api.prices.getCryptoPrices, { coins });
+    // Get prices for all coins (using action since queries can't fetch)
+    const prices = await ctx.runAction(api.prices.getCryptoPricesAction, { coins });
     
     // Calculate total USD value
     let totalUSD = 0;
@@ -53,13 +54,14 @@ export const calculatePlatformBalanceUSD = query({
 
 /**
  * Calculate total USD value of mining balance
+ * Uses action since we need to fetch prices
  */
-export const calculateMiningBalanceUSD = query({
+export const calculateMiningBalanceUSD = action({
   args: {
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.db.get(args.userId);
+    const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId });
     if (!user) {
       return 0;
     }
@@ -88,8 +90,8 @@ export const calculateMiningBalanceUSD = query({
       return 0;
     }
 
-    // Get prices for all coins
-    const prices = await ctx.runQuery(api.prices.getCryptoPrices, { coins });
+    // Get prices for all coins (using action since queries can't fetch)
+    const prices = await ctx.runAction(api.prices.getCryptoPricesAction, { coins });
     
     // Calculate total USD value
     let totalUSD = 0;
