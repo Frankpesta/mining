@@ -54,66 +54,18 @@ const COIN_ID_MAP: Record<string, string> = {
 };
 
 /**
- * Get real-time prices for multiple coins
- * Returns prices in USD
- */
-export const getCryptoPrices = query({
-  args: {
-    coins: v.array(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const coinIds = args.coins
-      .map((coin) => COIN_ID_MAP[coin.toUpperCase()])
-      .filter(Boolean)
-      .join(",");
-
-    if (!coinIds) {
-      return {};
-    }
-
-    try {
-      const response = await fetch(
-        `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        },
-      );
-
-      if (!response.ok) {
-        console.error(`CoinGecko API failed: ${response.status}`);
-        return {};
-      }
-
-      const data = await response.json();
-      const prices: Record<string, number> = {};
-
-      // Map CoinGecko IDs back to coin symbols
-      for (const [coin, coinId] of Object.entries(COIN_ID_MAP)) {
-        if (data[coinId]?.usd) {
-          prices[coin] = data[coinId].usd;
-        }
-      }
-
-      return prices;
-    } catch (error) {
-      console.error("Error fetching crypto prices:", error);
-      return {};
-    }
-  },
-});
-
-/**
  * Get price for a single coin (query - for client-side use)
+ * Note: Queries can't use fetch, so this returns 0 and should be called from client-side
+ * where actions can be used instead
  */
 export const getCoinPrice = query({
   args: {
     coin: v.string(),
   },
   handler: async (ctx, args) => {
-    const prices = await getCryptoPrices(ctx, { coins: [args.coin] });
-    return prices[args.coin.toUpperCase()] ?? 0;
+    // Queries can't fetch, so return 0
+    // Client-side code should use the action version instead
+    return 0;
   },
 });
 
