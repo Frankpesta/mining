@@ -136,6 +136,7 @@ export const updateMiningOperationEarnings = mutation({
     operationId: v.id("miningOperations"),
     totalMined: v.number(),
     currentRate: v.number(),
+    coinPrice: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const operation = await ctx.db.get(args.operationId);
@@ -161,8 +162,8 @@ export const updateMiningOperationEarnings = mutation({
     const balanceDeltaCoin = args.totalMined - operation.totalMined;
 
     if (balanceDeltaCoin > 0) {
-      // Get real-time price for the coin (using action since mutations can't use fetch)
-      const coinPrice = await ctx.runAction(internal.prices.getCoinPriceAction, { coin });
+      // Use provided coin price or default to 1 (for stablecoins or when price not available)
+      const coinPrice = args.coinPrice ?? 1;
 
       // Mining earnings are paid out to platform balance for withdrawal
       // Update platform balance with the coin being mined

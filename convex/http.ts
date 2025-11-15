@@ -17,12 +17,10 @@ const processMiningOperationsAction = httpAction(async (ctx, request) => {
 
   try {
     await ctx.runAction(internal.crons.processMiningOperationsAction, {});
-    const result = { success: true };
     
     return new Response(
       JSON.stringify({
         success: true,
-        ...result,
       }),
       {
         status: 200,

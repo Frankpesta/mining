@@ -1,6 +1,6 @@
 import { internalMutation, internalAction } from "./_generated/server";
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
+import { internal, api } from "./_generated/api";
 import { v } from "convex/values";
 
 /**
@@ -204,7 +204,7 @@ export const processMiningOperationsAction = internalAction({
     const supportedCoins = ["BTC", "ETH", "SOL", "LTC", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI", "USDT", "USDC"];
     
     // Fetch prices for all coins
-    const prices = await ctx.runAction(internal.prices.getCryptoPricesAction, {
+    const prices = await ctx.runAction(api.prices.getCryptoPricesAction, {
       coins: supportedCoins,
     });
     
