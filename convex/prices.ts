@@ -32,6 +32,20 @@ export type MainstreamCoin = (typeof MAINSTREAM_COINS)[number];
 const COINGECKO_API = "https://api.coingecko.com/api/v3";
 
 /**
+ * Rate limiting: CoinGecko free tier allows ~10-50 calls/minute
+ * We'll implement retry logic with exponential backoff for 429 errors
+ */
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY = 1000; // 1 second
+
+/**
+ * Helper function to sleep/delay
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Map coin symbols to CoinGecko IDs
  */
 const COIN_ID_MAP: Record<string, string> = {
@@ -72,6 +86,7 @@ export const getCoinPrice = query({
 /**
  * Get price for a single coin (action - for use in mutations)
  * This uses fetch which is only allowed in actions
+ * Includes retry logic with exponential backoff for rate limiting
  */
 export const getCoinPriceAction = action({
   args: {
@@ -83,32 +98,67 @@ export const getCoinPriceAction = action({
       return 0;
     }
 
-    try {
-      const response = await fetch(
-        `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd`,
-        {
-          headers: {
-            Accept: "application/json",
+    let lastError: Error | null = null;
+
+    // Retry logic with exponential backoff for rate limiting
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch(
+          `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd`,
+          {
+            headers: {
+              Accept: "application/json",
+            },
           },
-        },
-      );
+        );
 
-      if (!response.ok) {
-        console.error(`CoinGecko API failed: ${response.status}`);
-        return 0;
+        // Handle rate limiting (429) with retry
+        if (response.status === 429) {
+          if (attempt < MAX_RETRIES) {
+            const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+            console.warn(
+              `CoinGecko API rate limited (429) for ${args.coin}. Retrying in ${retryDelay}ms (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
+            );
+            await sleep(retryDelay);
+            continue; // Retry
+          } else {
+            console.error(
+              `CoinGecko API rate limited (429) for ${args.coin}. Max retries exceeded.`,
+            );
+            return 0;
+          }
+        }
+
+        if (!response.ok) {
+          console.error(`CoinGecko API failed: ${response.status} ${response.statusText}`);
+          return 0;
+        }
+
+        const data = await response.json();
+        return data[coinId]?.usd ?? 0;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (attempt < MAX_RETRIES) {
+          const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+          console.warn(
+            `Error fetching price for ${args.coin} (attempt ${attempt + 1}/${MAX_RETRIES + 1}). Retrying in ${retryDelay}ms:`,
+            lastError.message,
+          );
+          await sleep(retryDelay);
+          continue;
+        }
       }
-
-      const data = await response.json();
-      return data[coinId]?.usd ?? 0;
-    } catch (error) {
-      console.error("Error fetching crypto price:", error);
-      return 0;
     }
+
+    // If we get here, all retries failed
+    console.error(`Error fetching price for ${args.coin} after all retries:`, lastError);
+    return 0;
   },
 });
 
 /**
  * Get prices for multiple coins (action - for use in mutations)
+ * Includes retry logic with exponential backoff for rate limiting (429 errors)
  */
 export const getCryptoPricesAction = action({
   args: {
@@ -124,38 +174,72 @@ export const getCryptoPricesAction = action({
       return {};
     }
 
-    try {
-      const response = await fetch(
-        `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
-        {
-          headers: {
-            Accept: "application/json",
+    let lastError: Error | null = null;
+    
+    // Retry logic with exponential backoff for rate limiting
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch(
+          `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
+          {
+            headers: {
+              Accept: "application/json",
+            },
           },
-        },
-      );
+        );
 
-      if (!response.ok) {
-        console.error(`CoinGecko API failed: ${response.status}`);
-        return {};
-      }
+        // Handle rate limiting (429) with retry
+        if (response.status === 429) {
+          if (attempt < MAX_RETRIES) {
+            const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+            console.warn(
+              `CoinGecko API rate limited (429). Retrying in ${retryDelay}ms (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
+            );
+            await sleep(retryDelay);
+            continue; // Retry
+          } else {
+            console.error(
+              `CoinGecko API rate limited (429). Max retries exceeded. Consider upgrading to CoinGecko Pro API or reducing request frequency.`,
+            );
+            return {}; // Return empty after max retries
+          }
+        }
 
-      const data = await response.json();
-      const prices: Record<string, number> = {};
+        if (!response.ok) {
+          console.error(`CoinGecko API failed: ${response.status} ${response.statusText}`);
+          return {};
+        }
 
-      // Map CoinGecko IDs back to coin symbols (only for requested coins)
-      for (const coin of args.coins) {
-        const coinUpper = coin.toUpperCase();
-        const coinId = COIN_ID_MAP[coinUpper];
-        if (coinId && data[coinId]?.usd) {
-          prices[coinUpper] = data[coinId].usd;
+        const data = await response.json();
+        const prices: Record<string, number> = {};
+
+        // Map CoinGecko IDs back to coin symbols (only for requested coins)
+        for (const coin of args.coins) {
+          const coinUpper = coin.toUpperCase();
+          const coinId = COIN_ID_MAP[coinUpper];
+          if (coinId && data[coinId]?.usd) {
+            prices[coinUpper] = data[coinId].usd;
+          }
+        }
+
+        return prices;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        if (attempt < MAX_RETRIES) {
+          const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
+          console.warn(
+            `Error fetching crypto prices (attempt ${attempt + 1}/${MAX_RETRIES + 1}). Retrying in ${retryDelay}ms:`,
+            lastError.message,
+          );
+          await sleep(retryDelay);
+          continue;
         }
       }
-
-      return prices;
-    } catch (error) {
-      console.error("Error fetching crypto prices:", error);
-      return {};
     }
+
+    // If we get here, all retries failed
+    console.error("Error fetching crypto prices after all retries:", lastError);
+    return {};
   },
 });
 

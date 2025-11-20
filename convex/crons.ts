@@ -203,10 +203,22 @@ export const processMiningOperationsAction = internalAction({
     // This is more efficient than fetching per-operation
     const supportedCoins = ["BTC", "ETH", "SOL", "LTC", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI", "USDT", "USDC"];
     
+    // Add a small delay to help avoid rate limiting if multiple cron jobs run simultaneously
+    // CoinGecko free tier allows ~10-50 calls/minute
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
     // Fetch prices for all coins
     const prices = await ctx.runAction(api.prices.getCryptoPricesAction, {
       coins: supportedCoins,
     });
+    
+    // Log if we got prices successfully
+    const priceCount = Object.keys(prices).length;
+    if (priceCount > 0) {
+      console.log(`[processMiningOperations] Successfully fetched ${priceCount} coin prices`);
+    } else {
+      console.warn(`[processMiningOperations] No prices fetched - may be rate limited or API error`);
+    }
     
     // Call the mutation with prices
     await ctx.runMutation(internal.crons.processMiningOperationsMutation, {
