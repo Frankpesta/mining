@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const resources = [
   {
-    title: "HashHorizon Quickstart",
+    title: "blockhashpro Quickstart",
     description:
       "Step-by-step guide to funding your account, choosing a mining plan, and scheduling your first payout.",
     href: "#quickstart",
@@ -27,7 +27,7 @@ export default function ResourcesPage() {
       <header className="space-y-6 text-center">
         <p className="text-xs uppercase tracking-[0.4em] text-primary">Resources</p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-          Everything you need to start mining with HashHorizon
+          Everything you need to start mining with blockhashpro
         </h1>
         <p className="mx-auto max-w-2xl text-sm text-muted-foreground sm:text-base">
           Tutorials, calculators, and safety resources to help you maximise rewards and stay secure

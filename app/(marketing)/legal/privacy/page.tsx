@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | HashHorizon",
-  description: "Privacy policy for HashHorizon mining platform",
+  title: "Privacy Policy | blockhashpro",
+  description: "Privacy policy for blockhashpro mining platform",
 };
 
 export default function PrivacyPage() {
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
           <div>
             <h2 className="text-2xl font-semibold">1. Introduction</h2>
             <p className="mt-2 text-muted-foreground">
-              HashHorizon ("we", "us", "our") is committed to protecting your privacy. This Privacy
+              blockhashpro ("we", "us", "our") is committed to protecting your privacy. This Privacy
               Policy explains how we collect, use, disclose, and safeguard your information when you
               use our mining platform and services.
             </p>
@@ -212,7 +212,7 @@ export default function PrivacyPage() {
               For questions, concerns, or requests regarding this Privacy Policy or your personal
               information, please contact us at{" "}
               <a href="/contact" className="text-primary hover:underline">
-                privacy@hashhorizon.com
+                privacy@blockhashpro.xyz
               </a>
               .
             </p>

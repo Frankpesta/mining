@@ -3,6 +3,27 @@ import { redirect } from "next/navigation";
 import { getConvexClient } from "@/lib/convex/client";
 import { api } from "@/convex/_generated/api";
 import { TicketsManagement } from "@/components/admin/tickets-management";
+import type { Id } from "@/convex/_generated/dataModel";
+
+type Ticket = {
+  _id: Id<"tickets">;
+  userId?: Id<"users">;
+  email: string;
+  name: string;
+  subject: string;
+  message: string;
+  company?: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high";
+  assignedTo?: Id<"users">;
+  createdAt: number;
+  updatedAt: number;
+  resolvedAt?: number;
+  user?: {
+    _id: Id<"users">;
+    email: string;
+  } | null;
+};
 
 export default async function AdminTicketsPage({
   searchParams,
@@ -15,7 +36,7 @@ export default async function AdminTicketsPage({
   }
 
   const convex = getConvexClient();
-  const tickets = await convex.query(api.tickets.getAllTickets, {
+  const ticketsData = await convex.query(api.tickets.getAllTickets, {
     status: searchParams.status as
       | "open"
       | "in_progress"
@@ -23,6 +44,17 @@ export default async function AdminTicketsPage({
       | "closed"
       | undefined,
   });
+
+  // Properly type the tickets with user data
+  const tickets: Ticket[] = ticketsData.map((ticket) => ({
+    ...ticket,
+    user: ticket.user
+      ? {
+          _id: ticket.user._id as Id<"users">,
+          email: ticket.user.email as string,
+        }
+      : null,
+  }));
 
   return (
     <div className="space-y-6">

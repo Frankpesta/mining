@@ -2,7 +2,7 @@ import { getAppBaseUrl } from "@/lib/env";
 
 import { getResendClient } from "./client";
 
-const DEFAULT_FROM_EMAIL = "HashHorizon Support <support@hashhorizon.app>";
+const DEFAULT_FROM_EMAIL = "blockhashpro Support <support@blockhashpro.xyz>";
 
 function getFromEmail() {
   return process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
@@ -35,7 +35,7 @@ export async function sendTicketReplyEmail({
   }
 
   const subject = isAdminReply
-    ? `Re: ${ticketSubject} - HashHorizon Support`
+    ? `Re: ${ticketSubject} - blockhashpro Support`
     : `New reply on ticket: ${ticketSubject}`;
 
   await client.emails.send({
@@ -45,7 +45,7 @@ export async function sendTicketReplyEmail({
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-          <h2 style="margin: 0;">HashHorizon Support</h2>
+          <h2 style="margin: 0;">blockhashpro Support</h2>
         </div>
         <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
           <h3 style="color: #1f2937; margin-top: 0;">${isAdminReply ? "Admin Response" : "New Reply"}</h3>
@@ -109,7 +109,7 @@ export async function sendTicketStatusChangeEmail({
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto;">
         <div style="background-color: #2563eb; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-          <h2 style="margin: 0;">HashHorizon Support</h2>
+          <h2 style="margin: 0;">blockhashpro Support</h2>
         </div>
         <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
           <h3 style="color: #1f2937; margin-top: 0;">Ticket Status Updated</h3>

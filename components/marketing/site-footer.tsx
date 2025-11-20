@@ -35,9 +35,9 @@ export function SiteFooter() {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-base font-semibold text-foreground">
               <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/15 text-base text-primary">
-                HH
+                BH
               </div>
-              HashHorizon
+              blockhashpro
             </div>
             <p className="text-sm text-muted-foreground">
               Institutional-grade crypto mining marketplace with real-time operations and
@@ -65,7 +65,7 @@ export function SiteFooter() {
           ))}
         </div>
         <div className="flex flex-col-reverse items-center justify-between gap-4 pt-6 text-xs text-muted-foreground sm:flex-row">
-          <p>© {new Date().getFullYear()} HashHorizon Labs. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} blockhashpro Labs. All rights reserved.</p>
           <div className="flex items-center gap-6">
             <Link href="/legal/privacy" className="hover:text-foreground">
               Privacy

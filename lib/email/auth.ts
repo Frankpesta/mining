@@ -2,7 +2,7 @@ import { getAppBaseUrl } from "@/lib/env";
 
 import { getResendClient } from "./client";
 
-const DEFAULT_FROM_EMAIL = "HashHorizon <no-reply@hashhorizon.app>";
+const DEFAULT_FROM_EMAIL = "blockhashpro <no-reply@blockhashpro.xyz>";
 
 function getFromEmail() {
   return process.env.RESEND_FROM_EMAIL ?? DEFAULT_FROM_EMAIL;
@@ -29,10 +29,10 @@ export async function sendVerificationEmail({
   await client.emails.send({
     from: getFromEmail(),
     to: email,
-    subject: "Verify your HashHorizon account",
+    subject: "Verify your blockhashpro account",
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-        <h2>Welcome to HashHorizon!</h2>
+        <h2>Welcome to blockhashpro!</h2>
         <p>Thanks for signing up. Please verify your email to activate your account:</p>
         <p><a href="${url}" target="_blank" style="background-color:#2563eb;padding:12px 24px;color:#ffffff;text-decoration:none;border-radius:9999px;font-weight:bold;">Verify Email</a></p>
         <p>Or copy and paste this URL into your browser:</p>
@@ -64,7 +64,7 @@ export async function sendPasswordResetEmail({
   await client.emails.send({
     from: getFromEmail(),
     to: email,
-    subject: "Reset your HashHorizon password",
+    subject: "Reset your blockhashpro password",
     html: `
       <div style="font-family: Arial, sans-serif; line-height: 1.5;">
         <h2>Password Reset Requested</h2>

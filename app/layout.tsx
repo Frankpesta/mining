@@ -18,11 +18,11 @@ const geistSans = Manrope({
 
 export const metadata: Metadata = {
   title: {
-    default: "HashHorizon | Crypto Mining Marketplace",
-    template: "%s | HashHorizon",
+    default: "blockhashpro | Crypto Mining Marketplace",
+    template: "%s | blockhashpro",
   },
   description:
-    "HashHorizon is a professional crypto mining marketplace with real-time operations, secure deposits, and comprehensive admin controls.",
+    "blockhashpro is a professional crypto mining marketplace with real-time operations, secure deposits, and comprehensive admin controls.",
   icons: {
     icon: "/favicon.ico",
   },

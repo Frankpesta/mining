@@ -130,7 +130,7 @@ export default async function PricingPage() {
           </h2>
           <p className="text-sm text-muted-foreground">
             Everything you need to know about funding, mining rewards, and withdrawals on
-            HashHorizon.
+            blockhashpro.
           </p>
         </div>
         <div className="space-y-6 text-sm text-muted-foreground">

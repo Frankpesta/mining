@@ -21,7 +21,7 @@ const values = [
 const timeline = [
   {
     year: "2022",
-    title: "HashHorizon founded",
+    title: "blockhashpro founded",
     description: "Launched with a mission to make professional mining accessible to individual crypto holders.",
   },
   {
@@ -45,7 +45,7 @@ export default function CompanyPage() {
           Building the easiest way for anyone to mine crypto
         </h1>
         <p className="mx-auto max-w-3xl text-sm text-muted-foreground sm:text-base">
-          HashHorizon is a distributed team of miners, engineers, and product builders. We believe
+          blockhashpro is a distributed team of miners, engineers, and product builders. We believe
           every individual should be able to own powerful mining hardware without dealing with
           noise, heat, or downtime.
         </p>

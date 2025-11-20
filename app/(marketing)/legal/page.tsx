@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Legal Information | HashHorizon",
-  description: "Legal information and compliance for HashHorizon",
+  title: "Legal Information | blockhashpro",
+  description: "Legal information and compliance for blockhashpro",
 };
 
 export default function LegalPage() {
@@ -18,7 +18,7 @@ export default function LegalPage() {
             <h2 className="text-2xl font-semibold">Company Information</h2>
             <div className="mt-2 space-y-2 text-muted-foreground">
               <p>
-                <strong>Legal Name:</strong> HashHorizon Labs
+                <strong>Legal Name:</strong> blockhashpro Labs
               </p>
               <p>
                 <strong>Business Type:</strong> Cryptocurrency Mining Services Provider
@@ -36,7 +36,7 @@ export default function LegalPage() {
             <h2 className="text-2xl font-semibold">Regulatory Compliance</h2>
             <div className="mt-2 space-y-2 text-muted-foreground">
               <p>
-                HashHorizon operates in compliance with applicable financial regulations and
+                blockhashpro operates in compliance with applicable financial regulations and
                 anti-money laundering (AML) requirements. We are committed to:
               </p>
               <ul className="ml-6 list-disc space-y-1">
@@ -84,7 +84,7 @@ export default function LegalPage() {
             <h2 className="text-2xl font-semibold">Intellectual Property</h2>
             <p className="mt-2 text-muted-foreground">
               All trademarks, logos, and service marks displayed on the Platform are the property of
-              HashHorizon or their respective owners. You may not use these marks without our prior
+              blockhashpro or their respective owners. You may not use these marks without our prior
               written consent or the consent of the respective owner.
             </p>
           </div>
@@ -109,7 +109,7 @@ export default function LegalPage() {
           <div>
             <h2 className="text-2xl font-semibold">Limitation of Liability</h2>
             <p className="mt-2 text-muted-foreground">
-              To the maximum extent permitted by law, HashHorizon shall not be liable for any
+              To the maximum extent permitted by law, blockhashpro shall not be liable for any
               indirect, incidental, special, consequential, or punitive damages, or any loss of
               profits or revenues, whether incurred directly or indirectly, or any loss of data,
               use, goodwill, or other intangible losses resulting from your use of our services.
@@ -139,7 +139,7 @@ export default function LegalPage() {
             <h2 className="text-2xl font-semibold">Entire Agreement</h2>
             <p className="mt-2 text-muted-foreground">
               These terms, together with our Privacy Policy and any other legal documents referenced
-              herein, constitute the entire agreement between you and HashHorizon regarding the use
+              herein, constitute the entire agreement between you and blockhashpro regarding the use
               of our services.
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function LegalPage() {
             <p className="mt-2 text-muted-foreground">
               For legal inquiries, please contact our legal department at{" "}
               <a href="/contact" className="text-primary hover:underline">
-                legal@hashhorizon.com
+                legal@blockhashpro.xyz
               </a>
               .
             </p>

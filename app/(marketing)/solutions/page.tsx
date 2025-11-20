@@ -47,7 +47,7 @@ export default function SolutionsPage() {
           Mining solutions for every crypto journey
         </h1>
         <p className="mx-auto max-w-2xl text-sm text-muted-foreground sm:text-base">
-          From first-time miners to seasoned accumulators, HashHorizon gives you the tools to buy
+          From first-time miners to seasoned accumulators, blockhashpro gives you the tools to buy
           mining power, monitor rewards, and grow your holdings with confidence.
         </p>
       </header>

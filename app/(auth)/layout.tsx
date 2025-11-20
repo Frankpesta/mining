@@ -5,11 +5,11 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: {
-    default: "Access HashHorizon",
-    template: "%s | HashHorizon",
+    default: "Access blockhashpro",
+    template: "%s | blockhashpro",
   },
   description:
-    "Secure access to HashHorizon. Create an account, verify your email, and manage mining operations effortlessly.",
+    "Secure access to blockhashpro. Create an account, verify your email, and manage mining operations effortlessly.",
 };
 
 export default function AuthLayout({
@@ -24,7 +24,7 @@ export default function AuthLayout({
         <div className="relative z-10 flex max-w-md flex-col gap-8">
           <div>
             <span className="text-sm uppercase tracking-[0.4em] text-blue-300">
-              HashHorizon
+              blockhashpro
             </span>
             <h2 className="mt-4 text-3xl font-bold leading-tight">
               Enterprise-grade crypto mining marketplace

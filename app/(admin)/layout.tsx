@@ -35,7 +35,7 @@ export default async function AdminLayout({
 
   return (
     <AppShell
-      brand={{ initials: "HH", title: "Admin Console", subtitle: "HashHorizon" }}
+      brand={{ initials: "BH", title: "Admin Console", subtitle: "blockhashpro" }}
       navigation={navigation}
       user={user}
       signOutAction={signOutAction}

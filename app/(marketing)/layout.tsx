@@ -5,11 +5,11 @@ import { SiteHeader } from "@/components/marketing/site-header";
 
 export const metadata: Metadata = {
   title: {
-    default: "HashHorizon | Crypto Mining Marketplace",
-    template: "%s | HashHorizon",
+    default: "blockhashpro | Crypto Mining Marketplace",
+    template: "%s | blockhashpro",
   },
   description:
-    "HashHorizon connects miners and investors with enterprise-grade infrastructure, real-time analytics, and automated settlements.",
+    "blockhashpro connects miners and investors with enterprise-grade infrastructure, real-time analytics, and automated settlements.",
 };
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {

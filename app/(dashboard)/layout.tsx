@@ -35,7 +35,7 @@ export default async function DashboardLayout({
 
   return (
     <AppShell
-      brand={{ initials: "HH", title: "HashHorizon", subtitle: "Mining Marketplace" }}
+      brand={{ initials: "BH", title: "blockhashpro", subtitle: "Mining Marketplace" }}
       navigation={navigation}
       user={user}
       signOutAction={signOutAction}

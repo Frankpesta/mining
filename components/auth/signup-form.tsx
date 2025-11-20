@@ -26,7 +26,7 @@ export function SignupForm() {
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
         <p className="text-sm text-muted-foreground">
-          Join HashHorizon to access mining dashboards and portfolio analytics.
+          Join blockhashpro to access mining dashboards and portfolio analytics.
         </p>
       </div>
 

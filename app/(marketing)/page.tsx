@@ -24,7 +24,7 @@ const featureHighlights = [
 ];
 
 const metrics = [
-  { label: "Active miners", value: "58,000+", hint: "Individuals earning with HashHorizon" },
+  { label: "Active miners", value: "58,000+", hint: "Individuals earning with blockhashpro" },
   { label: "Global locations", value: "24", hint: "Professionally managed mining sites" },
   { label: "Average uptime", value: "99.8%", hint: "Rolling 90-day equipment availability" },
 ];
@@ -58,7 +58,7 @@ const testimonials = [
     name: "Sophia Grant",
     role: "Community miner, Colorado",
     quote:
-      "HashHorizon removed all the hardware headaches. Daily updates and quick withdrawals make passive mining straightforward.",
+      "blockhashpro removed all the hardware headaches. Daily updates and quick withdrawals make passive mining straightforward.",
   },
 ];
 
@@ -125,7 +125,7 @@ function HeroSection() {
               Rent mining power in minutes and start earning crypto today.
             </h1>
             <p className="max-w-xl text-pretty text-lg text-blue-100/80">
-              HashHorizon lets anyone tap into professional mining infrastructure. Pick a plan, go
+              blockhashpro lets anyone tap into professional mining infrastructure. Pick a plan, go
               live instantly, and follow your rewards with real-time data and automated payouts.
             </p>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -199,12 +199,12 @@ function FeatureSection() {
     <section className="bg-muted/30">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-20 sm:px-6 lg:px-8">
         <div className="space-y-4 text-center">
-          <p className="text-xs uppercase tracking-[0.4em] text-primary">Why HashHorizon</p>
+          <p className="text-xs uppercase tracking-[0.4em] text-primary">Why blockhashpro</p>
           <h2 className="text-balance text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Designed for everyday miners who want pro-grade results
           </h2>
           <p className="text-pretty text-sm text-muted-foreground sm:text-base">
-            It shouldn’t take a warehouse of gear to mine crypto. HashHorizon gives you a clean
+            It shouldn’t take a warehouse of gear to mine crypto. blockhashpro gives you a clean
             dashboard, real-time data, and responsive support so your focus stays on growing
             rewards.
           </p>
@@ -318,7 +318,7 @@ function CTASection() {
           Own your slice of global mining power today.
         </h2>
         <p className="text-sm text-primary/80 sm:text-base">
-          HashHorizon removes the complexity of rigs and maintenance. Buy the mining power you need,
+          blockhashpro removes the complexity of rigs and maintenance. Buy the mining power you need,
           grow your rewards, and cash out on your terms.
         </p>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">

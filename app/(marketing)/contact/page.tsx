@@ -18,7 +18,7 @@ export default function ContactPage() {
         </h1>
         <p className="mx-auto max-w-2xl text-sm text-muted-foreground sm:text-base">
           Reach out for product demos, migration support, partnerships, or enterprise pricing. The
-          HashHorizon team spans infrastructure, treasury, and compliance experts.
+          blockhashpro team spans infrastructure, treasury, and compliance experts.
         </p>
       </header>
 
@@ -43,12 +43,12 @@ export default function ContactPage() {
           <CardContent className="space-y-6 text-sm text-muted-foreground">
             <div>
               <p className="font-semibold text-foreground">Enterprise support</p>
-              <p>support@hashhorizon.io</p>
+              <p>support@blockhashpro.xyz</p>
               <p>24/7 for Growth & Enterprise plans</p>
             </div>
             <div>
               <p className="font-semibold text-foreground">Sales</p>
-              <p>sales@hashhorizon.io</p>
+              <p>sales@blockhashpro.xyz</p>
               <p>Response within 1 business day</p>
             </div>
             <div className="space-y-4">

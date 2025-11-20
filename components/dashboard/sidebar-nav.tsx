@@ -1,7 +1,5 @@
 "use client";
 
-"use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -13,6 +11,7 @@ import {
   Gauge,
   Home,
   Layers,
+  MessageSquare,
   Settings,
   ShieldCheck,
   Users,
@@ -39,6 +38,7 @@ const iconMap = {
   users: Users,
   activity: Activity,
   settings: Settings,
+  "message-square": MessageSquare,
 } satisfies Record<string, LucideIcon>;
 
 export type SidebarNavIcon = keyof typeof iconMap;

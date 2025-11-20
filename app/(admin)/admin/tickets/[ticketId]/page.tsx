@@ -3,6 +3,38 @@ import { redirect } from "next/navigation";
 import { getConvexClient } from "@/lib/convex/client";
 import { api } from "@/convex/_generated/api";
 import { TicketDetail } from "@/components/admin/ticket-detail";
+import type { Id } from "@/convex/_generated/dataModel";
+
+type TicketReply = {
+  _id: Id<"ticketReplies">;
+  ticketId: Id<"tickets">;
+  userId: Id<"users">;
+  message: string;
+  isAdminReply: boolean;
+  createdAt: number;
+  user?: {
+    _id: Id<"users">;
+    email: string;
+    role: "user" | "admin";
+  } | null;
+};
+
+type Ticket = {
+  _id: Id<"tickets">;
+  userId?: Id<"users">;
+  email: string;
+  name: string;
+  subject: string;
+  message: string;
+  company?: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high";
+  assignedTo?: Id<"users">;
+  createdAt: number;
+  updatedAt: number;
+  resolvedAt?: number;
+  replies: TicketReply[];
+};
 
 export default async function AdminTicketDetailPage({
   params,
@@ -15,13 +47,28 @@ export default async function AdminTicketDetailPage({
   }
 
   const convex = getConvexClient();
-  const ticket = await convex.query(api.tickets.getTicketWithReplies, {
-    ticketId: params.ticketId as any,
+  const ticketData = await convex.query(api.tickets.getTicketWithReplies, {
+    ticketId: params.ticketId as Id<"tickets">,
   });
 
-  if (!ticket) {
+  if (!ticketData) {
     redirect("/admin/tickets");
   }
+
+  // Properly type the ticket with user data
+  const ticket: Ticket = {
+    ...ticketData,
+    replies: ticketData.replies.map((reply) => ({
+      ...reply,
+      user: reply.user
+        ? {
+            _id: reply.user._id as Id<"users">,
+            email: reply.user.email as string,
+            role: reply.user.role as "user" | "admin",
+          }
+        : null,
+    })),
+  };
 
   return (
     <div className="space-y-6">

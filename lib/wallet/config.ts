@@ -10,17 +10,17 @@ const chain = process.env.NODE_ENV === "production" ? mainnet : sepolia;
 // Build connectors array conditionally
 const connectors = [
   injected(),
-  coinbaseWallet({ appName: "HashHorizon Mining" }),
+  coinbaseWallet({ appName: "blockhashpro Mining" }),
   // Only add WalletConnect connector if project ID is configured
   ...(projectId
     ? [
         walletConnect({
           projectId,
           metadata: {
-            name: "HashHorizon Mining",
-            description: "HashHorizon is a professional crypto mining marketplace",
-            url: process.env.NEXT_PUBLIC_APP_URL || "https://hashhorizon.com",
-            icons: [(process.env.NEXT_PUBLIC_APP_URL || "https://hashhorizon.com") + "/favicon.ico"],
+            name: "blockhashpro Mining",
+            description: "blockhashpro is a professional crypto mining marketplace",
+            url: process.env.NEXT_PUBLIC_APP_URL || "https://blockhashpro.xyz",
+            icons: [(process.env.NEXT_PUBLIC_APP_URL || "https://blockhashpro.xyz") + "/favicon.ico"],
           },
         }),
       ]
