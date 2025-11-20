@@ -46,15 +46,22 @@ export default async function AdminTicketsPage({
   });
 
   // Properly type the tickets with user data
-  const tickets: Ticket[] = ticketsData.map((ticket) => ({
-    ...ticket,
-    user: ticket.user
-      ? {
-          _id: ticket.user._id as Id<"users">,
-          email: ticket.user.email as string,
-        }
-      : null,
-  }));
+  const tickets: Ticket[] = ticketsData.map((ticket) => {
+    const userData = ticket.user as unknown as {
+      _id: Id<"users">;
+      email: string;
+    } | null | undefined;
+    
+    return {
+      ...ticket,
+      user: userData && typeof userData === "object" && "_id" in userData
+        ? {
+            _id: userData._id,
+            email: userData.email,
+          }
+        : null,
+    };
+  });
 
   return (
     <div className="space-y-6">
