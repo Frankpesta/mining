@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope, Noto_Sans } from "next/font/google";
+import { Manrope } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { WalletProvider } from "@/components/providers/wallet-provider";
@@ -15,12 +15,6 @@ const geistSans = Manrope({
   preload: true,
 });
 
-const geistMono = Noto_Sans({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-  preload: true,
-});
 
 export const metadata: Metadata = {
   title: {
@@ -42,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable}  antialiased`}
       >
         <ConvexProvider>
           <WalletProvider>
