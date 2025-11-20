@@ -104,7 +104,11 @@ export const getTicketWithReplies = query({
     // Get user info for replies
     const userIds = new Set(replies.map((r) => r.userId));
     const users = await Promise.all(Array.from(userIds).map((id) => ctx.db.get(id)));
-    const userMap = new Map(users.map((u) => [u?._id, u]).filter(([id]) => id !== undefined));
+    const userMap = new Map(
+      users
+        .filter((u): u is NonNullable<typeof u> => u !== null && u !== undefined)
+        .map((u) => [u._id, u] as [Id<"users">, NonNullable<typeof u>])
+    );
 
     const repliesWithUsers = replies
       .map((reply) => ({
