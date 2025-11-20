@@ -25,7 +25,7 @@ export async function submitContactForm(formData: FormData) {
   if (!parsed.success) {
     return {
       success: false,
-      error: parsed.error.errors[0]?.message || "Invalid form data",
+      error: parsed.error.issues[0]?.message || "Invalid form data",
     };
   }
 
