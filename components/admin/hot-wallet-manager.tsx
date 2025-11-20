@@ -36,9 +36,27 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "@/components/ui/use-toast";
 import { createHotWallet, deleteHotWallet, updateHotWallet } from "@/app/(admin)/admin/settings/actions";
+import { SUPPORTED_CRYPTO, CRYPTO_NAMES, type SupportedCrypto } from "@/lib/crypto/constants";
 
 const walletFormSchema = z.object({
-  crypto: z.enum(["ETH", "USDT", "USDC"]),
+  crypto: z.enum([
+    "BTC",
+    "ETH",
+    "SOL",
+    "LTC",
+    "BNB",
+    "ADA",
+    "XRP",
+    "DOGE",
+    "DOT",
+    "MATIC",
+    "AVAX",
+    "ATOM",
+    "LINK",
+    "UNI",
+    "USDT",
+    "USDC",
+  ]),
   address: z.string().min(1, "Address is required"),
   label: z.string().optional(),
 });
@@ -47,7 +65,7 @@ type WalletFormValues = z.infer<typeof walletFormSchema>;
 
 type HotWallet = {
   _id: string;
-  crypto: "ETH" | "USDT" | "USDC";
+  crypto: SupportedCrypto;
   address: string;
   label?: string | null;
 };
@@ -66,7 +84,7 @@ export function HotWalletManager({ initialWallets }: HotWalletManagerProps) {
   const form = useForm<WalletFormValues>({
     resolver: zodResolver(walletFormSchema),
     defaultValues: {
-      crypto: "ETH",
+      crypto: "BTC" as SupportedCrypto,
       address: "",
       label: "",
     },
@@ -149,9 +167,11 @@ export function HotWalletManager({ initialWallets }: HotWalletManagerProps) {
                           {...field}
                           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         >
-                          <option value="ETH">Ethereum (ETH)</option>
-                          <option value="USDT">Tether (USDT)</option>
-                          <option value="USDC">USD Coin (USDC)</option>
+                          {SUPPORTED_CRYPTO.map((crypto) => (
+                            <option key={crypto} value={crypto}>
+                              {CRYPTO_NAMES[crypto]} ({crypto})
+                            </option>
+                          ))}
                         </select>
                       </FormControl>
                       <FormMessage />

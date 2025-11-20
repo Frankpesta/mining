@@ -13,17 +13,25 @@ export default function ResetPasswordPage({
     return (
       <div className="space-y-6 text-center">
         <div className="space-y-2">
-          <h1 className="text-2xl font-semibold tracking-tight">Invalid reset link</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Reset link missing</h1>
           <p className="text-sm text-muted-foreground">
-            The password reset link is missing or has expired. Request a new link to continue.
+            The password reset link is missing from the URL. Please check your email and click the link again, or request a new reset link.
           </p>
         </div>
-        <Link
-          href="/auth/forgot-password"
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          Request a new reset link
-        </Link>
+        <div className="flex flex-col gap-3">
+          <Link
+            href="/auth/forgot-password"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+          >
+            Request a new reset link
+          </Link>
+          <Link
+            href="/auth/login"
+            className="text-sm font-medium text-primary hover:underline"
+          >
+            Back to sign in
+          </Link>
+        </div>
       </div>
     );
   }

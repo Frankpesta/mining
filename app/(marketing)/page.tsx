@@ -323,10 +323,10 @@ function CTASection() {
         </p>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button size="lg" asChild>
-            <Link href="/auth/signup">Create Account</Link>
+            <Link href="/auth/signup">Start mining in minutes</Link>
           </Button>
           <Button size="lg" variant="outline" asChild>
-            <Link href="/pricing">View Pricing</Link>
+            <Link href="/pricing">Compare plans</Link>
           </Button>
         </div>
       </div>

@@ -48,7 +48,17 @@ export function LoginForm() {
       />
 
       {state.message ? (
-        <p className="text-sm text-destructive">{state.message}</p>
+        <div className="space-y-2">
+          <p className="text-sm text-destructive">{state.message}</p>
+          {state.message.includes("verify your email") && (
+            <Link
+              href="/auth/resend-verification"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Resend verification email
+            </Link>
+          )}
+        </div>
       ) : null}
 
       <SubmitButton label="Sign in" />

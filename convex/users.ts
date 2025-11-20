@@ -151,7 +151,7 @@ export const consumeVerificationToken = mutation({
       .first();
 
     if (!user) {
-      throw new ConvexError("Invalid verification token");
+      throw new ConvexError("Invalid verification token or token has already been used");
     }
 
     if (user.verificationTokenExpiresAt && user.verificationTokenExpiresAt < Date.now()) {
@@ -224,7 +224,7 @@ export const consumeResetToken = mutation({
       .first();
 
     if (!user) {
-      throw new ConvexError("Invalid reset token");
+      throw new ConvexError("Invalid reset token or token has already been used");
     }
 
     if (user.resetTokenExpiresAt && user.resetTokenExpiresAt < Date.now()) {

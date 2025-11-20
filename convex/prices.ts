@@ -142,10 +142,12 @@ export const getCryptoPricesAction = action({
       const data = await response.json();
       const prices: Record<string, number> = {};
 
-      // Map CoinGecko IDs back to coin symbols
-      for (const [coin, coinId] of Object.entries(COIN_ID_MAP)) {
-        if (data[coinId]?.usd) {
-          prices[coin] = data[coinId].usd;
+      // Map CoinGecko IDs back to coin symbols (only for requested coins)
+      for (const coin of args.coins) {
+        const coinUpper = coin.toUpperCase();
+        const coinId = COIN_ID_MAP[coinUpper];
+        if (coinId && data[coinId]?.usd) {
+          prices[coinUpper] = data[coinId].usd;
         }
       }
 

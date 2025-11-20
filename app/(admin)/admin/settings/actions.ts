@@ -6,9 +6,10 @@ import { api } from "@/convex/_generated/api";
 import { getConvexClient } from "@/lib/convex/client";
 import { requireAdminSession } from "@/lib/auth/session";
 import type { Id } from "@/convex/_generated/dataModel";
+import type { SupportedCrypto } from "@/lib/crypto/constants";
 
 type HotWalletInput = {
-  crypto: "ETH" | "USDT" | "USDC";
+  crypto: SupportedCrypto;
   address: string;
   label?: string;
 };

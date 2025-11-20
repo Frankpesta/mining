@@ -10,7 +10,26 @@ export const listHotWallets = query({
 });
 
 export const getHotWalletByCrypto = query({
-  args: { crypto: v.union(v.literal("ETH"), v.literal("USDT"), v.literal("USDC")) },
+  args: {
+    crypto: v.union(
+      v.literal("BTC"),
+      v.literal("ETH"),
+      v.literal("SOL"),
+      v.literal("LTC"),
+      v.literal("BNB"),
+      v.literal("ADA"),
+      v.literal("XRP"),
+      v.literal("DOGE"),
+      v.literal("DOT"),
+      v.literal("MATIC"),
+      v.literal("AVAX"),
+      v.literal("ATOM"),
+      v.literal("LINK"),
+      v.literal("UNI"),
+      v.literal("USDT"),
+      v.literal("USDC"),
+    ),
+  },
   handler: async (ctx, args) => {
     const wallet = await ctx.db
       .query("hotWallets")
@@ -25,7 +44,24 @@ export const getHotWalletByCrypto = query({
 
 export const upsertHotWallet = mutation({
   args: {
-    crypto: v.union(v.literal("ETH"), v.literal("USDT"), v.literal("USDC")),
+    crypto: v.union(
+      v.literal("BTC"),
+      v.literal("ETH"),
+      v.literal("SOL"),
+      v.literal("LTC"),
+      v.literal("BNB"),
+      v.literal("ADA"),
+      v.literal("XRP"),
+      v.literal("DOGE"),
+      v.literal("DOT"),
+      v.literal("MATIC"),
+      v.literal("AVAX"),
+      v.literal("ATOM"),
+      v.literal("LINK"),
+      v.literal("UNI"),
+      v.literal("USDT"),
+      v.literal("USDC"),
+    ),
     address: v.string(),
     label: v.optional(v.string()),
     adminId: v.id("users"),

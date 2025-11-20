@@ -338,7 +338,17 @@ export async function resetPasswordAction(
       message: "Password reset successfully. You can now log in.",
     };
   } catch (error) {
-    const message = extractErrorMessage(error, "Reset link is invalid or expired.");
+    const errorMessage = error instanceof Error ? error.message : "";
+    let message = "Unable to reset password.";
+    
+    if (errorMessage.includes("expired")) {
+      message = "This reset link has expired. Please request a new password reset link.";
+    } else if (errorMessage.includes("Invalid")) {
+      message = "This reset link is invalid or has already been used. Please request a new one.";
+    } else {
+      message = "Reset link is invalid or expired. Please request a new password reset link.";
+    }
+    
     return {
       status: "error",
       message,
@@ -353,4 +363,62 @@ export async function verifyEmailByToken(token: string) {
     token,
   })) as Id<"users">;
   return userId;
+}
+
+export async function resendVerificationEmailAction(
+  _prevState: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const payload = {
+    email: String(formData.get("email") ?? ""),
+  };
+
+  const parsed = ForgotPasswordSchema.safeParse(payload);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      fieldErrors: formatZodErrors(parsed),
+      message: "Please provide a valid email address.",
+    };
+  }
+
+  const convex = getConvexClient();
+  const user = await convex.query(api.users.getUserByEmail, {
+    email: parsed.data.email,
+  });
+
+  if (!user) {
+    // Obscure existence of account for security
+    return {
+      status: "success",
+      message: "If an account exists and is unverified, a verification email has been sent.",
+    };
+  }
+
+  // Only send if email is not verified
+  if (user.isEmailVerified) {
+    return {
+      status: "success",
+      message: "Your email is already verified. You can sign in now.",
+    };
+  }
+
+  const verificationToken = generateRandomToken(64);
+  const verificationTokenExpiresAt = createTokenExpiry(60); // 60 minutes
+
+  await convex.mutation(api.users.setVerificationToken, {
+    userId: user._id,
+    verificationToken,
+    verificationTokenExpiresAt,
+  });
+
+  await sendVerificationEmail({
+    email: user.email,
+    token: verificationToken,
+  });
+
+  return {
+    status: "success",
+    message: "Verification email sent. Please check your inbox.",
+  };
 }

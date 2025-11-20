@@ -1,6 +1,8 @@
+import { render } from "@react-email/render";
 import { getAppBaseUrl } from "@/lib/env";
-
 import { getResendClient } from "./client";
+import { VerificationEmail } from "@/emails/verification-email";
+import { PasswordResetEmail } from "@/emails/password-reset-email";
 
 const DEFAULT_FROM_EMAIL = "blockhashpro <no-reply@blockhashpro.xyz>";
 
@@ -26,20 +28,17 @@ export async function sendVerificationEmail({
     return;
   }
 
+  const emailHtml = await render(
+    VerificationEmail({
+      verificationUrl: url,
+    }),
+  );
+
   await client.emails.send({
     from: getFromEmail(),
     to: email,
-    subject: "Verify your blockhashpro account",
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-        <h2>Welcome to blockhashpro!</h2>
-        <p>Thanks for signing up. Please verify your email to activate your account:</p>
-        <p><a href="${url}" target="_blank" style="background-color:#2563eb;padding:12px 24px;color:#ffffff;text-decoration:none;border-radius:9999px;font-weight:bold;">Verify Email</a></p>
-        <p>Or copy and paste this URL into your browser:</p>
-        <pre style="white-space:break-spaces;">${url}</pre>
-        <p>This link will expire in 60 minutes.</p>
-      </div>
-    `,
+    subject: "Confirm your email address - blockhashpro",
+    html: emailHtml,
   });
 }
 
@@ -61,19 +60,17 @@ export async function sendPasswordResetEmail({
     return;
   }
 
+  const emailHtml = await render(
+    PasswordResetEmail({
+      resetUrl: url,
+    }),
+  );
+
   await client.emails.send({
     from: getFromEmail(),
     to: email,
-    subject: "Reset your blockhashpro password",
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-        <h2>Password Reset Requested</h2>
-        <p>We received a request to reset your password. If this was you, click the button below:</p>
-        <p><a href="${url}" target="_blank" style="background-color:#2563eb;padding:12px 24px;color:#ffffff;text-decoration:none;border-radius:9999px;font-weight:bold;">Reset Password</a></p>
-        <p>If you didn't request this change, you can ignore this email.</p>
-        <p>This link will expire in 30 minutes.</p>
-      </div>
-    `,
+    subject: "Reset your password - blockhashpro",
+    html: emailHtml,
   });
 }
 

@@ -1,4 +1,4 @@
-const DEFAULT_APP_URL = "http://localhost:3000";
+const DEFAULT_APP_URL = "https://blockhashpro.xyz";
 
 export function getAppBaseUrl() {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL;
