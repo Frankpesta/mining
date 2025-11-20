@@ -47,13 +47,12 @@ export const getAllTickets = query({
     ),
   },
   handler: async (ctx, args) => {
-    let query = ctx.db.query("tickets");
-    
-    if (args.status) {
-      query = query.withIndex("by_status", (q) => q.eq("status", args.status!));
-    }
-
-    const tickets = await query.collect();
+    const tickets = args.status
+      ? await ctx.db
+          .query("tickets")
+          .withIndex("by_status", (q) => q.eq("status", args.status!))
+          .collect()
+      : await ctx.db.query("tickets").collect();
     
     // Get user info for tickets with userId
     const userIds = new Set(tickets.map((t) => t.userId).filter((id): id is Id<"users"> => id !== undefined));
