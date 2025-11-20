@@ -58,16 +58,24 @@ export default async function UserTicketDetailPage({
   // Properly type the ticket with user data
   const ticket: Ticket = {
     ...ticketData,
-    replies: ticketData.replies.map((reply) => ({
-      ...reply,
-      user: reply.user
-        ? {
-            _id: reply.user._id as Id<"users">,
-            email: reply.user.email as string,
-            role: reply.user.role as "user" | "admin",
-          }
-        : null,
-    })),
+    replies: ticketData.replies.map((reply) => {
+      const userData = reply.user as unknown as {
+        _id: Id<"users">;
+        email: string;
+        role: "user" | "admin";
+      } | null | undefined;
+      
+      return {
+        ...reply,
+        user: userData && typeof userData === "object" && "_id" in userData
+          ? {
+              _id: userData._id,
+              email: userData.email,
+              role: userData.role,
+            }
+          : null,
+      };
+    }),
   };
 
   return (
