@@ -1,8 +1,5 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { ContactForm } from "@/components/marketing/contact-form";
 
 const offices = [
   {
@@ -33,31 +30,7 @@ export default function ContactPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Full name</Label>
-                <Input id="name" placeholder="Jane Doe" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="email">Work email</Label>
-                <Input id="email" type="email" placeholder="you@company.com" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="company">Company</Label>
-                <Input id="company" placeholder="HashFund Capital" />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="message">How can we help?</Label>
-                <Textarea
-                  id="message"
-                  placeholder="Tell us about your mining operation and goals…"
-                  rows={5}
-                />
-              </div>
-              <Button type="submit" className="justify-self-start">
-                Submit inquiry
-              </Button>
-            </form>
+            <ContactForm />
           </CardContent>
         </Card>
 

@@ -18,7 +18,7 @@ const CRYPTO_LABELS: Record<"ETH" | "USDT" | "USDC", string> = {
   USDC: "USD Coin (ERC-20)",
 };
 
-export default async function DepositPage() {
+export default async function PurchaseHashPowerPage() {
   const current = await getCurrentUser();
   if (!current) {
     return null;
@@ -43,7 +43,7 @@ export default async function DepositPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Deposit funds</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Purchase HashPower</h1>
         <p className="text-sm text-muted-foreground">
           Choose a supported crypto asset and follow the instructions to add funds to your platform
           balance.

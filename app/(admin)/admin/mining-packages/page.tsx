@@ -29,7 +29,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { createPlan, deletePlan, togglePlanStatus, updatePlan } from "./actions";
 import { PlanActions } from "./plan-actions";
 
-export default async function AdminPlansPage() {
+export default async function AdminMiningPackagesPage() {
   const convex = getConvexClient();
   const plans = await convex.query(api.plans.listPlans, { activeOnly: false });
 
@@ -37,19 +37,19 @@ export default async function AdminPlansPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Manage plans</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Manage Mining Packages</h1>
           <p className="text-sm text-muted-foreground">
             Create, update, and publish mining contracts with customizable features and pricing.
           </p>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button size="sm">New plan</Button>
+            <Button size="sm">New Mining Package</Button>
           </DialogTrigger>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create new plan</DialogTitle>
-              <DialogDescription>Add a new mining plan to the marketplace.</DialogDescription>
+              <DialogTitle>Create new mining package</DialogTitle>
+              <DialogDescription>Add a new mining package to the marketplace.</DialogDescription>
             </DialogHeader>
             <PlanForm
               onSubmit={async (values) => {
@@ -63,13 +63,13 @@ export default async function AdminPlansPage() {
 
       <Card className="border-border/60 bg-card/80">
         <CardHeader>
-          <CardTitle>All plans</CardTitle>
-          <CardDescription>Manage your mining plan catalog</CardDescription>
+          <CardTitle>All Mining Packages</CardTitle>
+          <CardDescription>Manage your mining package catalog</CardDescription>
         </CardHeader>
         <CardContent>
           {plans.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              No plans created yet. Create your first plan to get started.
+              No mining packages created yet. Create your first mining package to get started.
             </div>
           ) : (
             <div className="overflow-x-auto">

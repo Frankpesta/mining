@@ -67,7 +67,7 @@ export default async function DashboardOverviewPage() {
           Welcome back, {user.email} 👋
         </h1>
         <p className="text-sm text-muted-foreground">
-          Monitor your mining performance, manage balances, and explore new hash rate plans.
+          Monitor your mining performance, manage balances, and explore new mining packages.
         </p>
       </div>
 

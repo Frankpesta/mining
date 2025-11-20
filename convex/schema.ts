@@ -207,5 +207,56 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_user", ["userId"]),
+
+  tickets: defineTable({
+    userId: v.optional(v.id("users")), // Optional for guest contact form submissions
+    email: v.string(),
+    name: v.string(),
+    subject: v.string(),
+    message: v.string(),
+    company: v.optional(v.string()),
+    status: v.union(
+      v.literal("open"),
+      v.literal("in_progress"),
+      v.literal("resolved"),
+      v.literal("closed"),
+    ),
+    priority: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+    assignedTo: v.optional(v.id("users")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_email", ["email"]),
+
+  ticketReplies: defineTable({
+    ticketId: v.id("tickets"),
+    userId: v.id("users"), // Admin or user who replied
+    message: v.string(),
+    isAdminReply: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_ticket", ["ticketId"]),
+
+  notifications: defineTable({
+    userId: v.id("users"),
+    type: v.union(
+      v.literal("ticket_reply"),
+      v.literal("ticket_status_change"),
+      v.literal("deposit_approved"),
+      v.literal("withdrawal_approved"),
+      v.literal("withdrawal_rejected"),
+      v.literal("mining_completed"),
+    ),
+    title: v.string(),
+    message: v.string(),
+    relatedId: v.optional(v.string()), // ID of related entity (ticket, deposit, etc.)
+    isRead: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_unread", ["userId", "isRead"]),
 });
 

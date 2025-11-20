@@ -92,7 +92,21 @@ export function ProfileForm({
         body: file,
       });
 
-      const storageId = await result.text();
+      if (!result.ok) {
+        throw new Error(`Upload failed: ${result.statusText}`);
+      }
+
+      const responseText = await result.text();
+      let storageId: string;
+
+      // Try to parse as JSON first (Convex returns JSON with storageId field)
+      try {
+        const responseJson = JSON.parse(responseText);
+        storageId = responseJson.storageId || responseText;
+      } catch {
+        // If not JSON, assume it's the storage ID directly
+        storageId = responseText.trim();
+      }
 
       // Update profile with new picture
       await convex.mutation(api.profiles.updateProfilePicture, {
@@ -103,6 +117,11 @@ export function ProfileForm({
       // Get new URL
       const newUrl = await convex.query(api.profiles.getProfileWithPicture, { userId });
       setProfilePictureUrl(newUrl?.profilePictureUrl || null);
+
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
 
       toast.success("Your profile picture has been updated successfully.");
     } catch (error) {

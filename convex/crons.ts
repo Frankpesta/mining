@@ -217,10 +217,16 @@ export const processMiningOperationsAction = internalAction({
 
 /**
  * Convex cron jobs configuration
- * This schedules the mining operations processor to run every hour
+ * This schedules the mining operations processor to run automatically
+ * 
+ * IMPORTANT: For cron jobs to work automatically in Convex:
+ * 1. Make sure this file is deployed: `npx convex deploy`
+ * 2. Check the Convex Dashboard > Functions > Schedules to verify the cron is registered
+ * 3. The cron will run automatically once deployed and registered
  */
 const crons = cronJobs();
 
+// Run every hour at minute 0 (e.g., 1:00, 2:00, 3:00, etc.)
 crons.hourly(
   "processMiningOperations",
   {
@@ -228,5 +234,14 @@ crons.hourly(
   },
   internal.crons.processMiningOperationsAction,
 );
+
+// Optional: Run every 15 minutes for more frequent updates (uncomment if needed)
+// crons.interval(
+//   "processMiningOperationsFrequent",
+//   {
+//     seconds: 15 * 60, // 15 minutes
+//   },
+//   internal.crons.processMiningOperationsAction,
+// );
 
 export default crons;

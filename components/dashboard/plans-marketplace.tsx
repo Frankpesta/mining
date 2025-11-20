@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { formatCurrency } from "@/lib/utils";
-import { purchasePlan } from "@/app/(dashboard)/dashboard/plans/actions";
+import { purchasePlan } from "@/app/(dashboard)/dashboard/mining-packages/actions";
 import type { Id } from "@/convex/_generated/dataModel";
 
 type Plan = {
@@ -49,7 +49,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
 
   const handlePurchase = (coin: string) => {
     if (!canAfford) {
-      toast.error("Insufficient balance. Please deposit funds first.");
+      toast.error("Insufficient balance. Please purchase hashpower first.");
       return;
     }
 
@@ -62,7 +62,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
         });
         toast.success(`Successfully purchased ${plan.name}! Mining operation started.`);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to purchase plan");
+        toast.error(error instanceof Error ? error.message : "Failed to purchase mining package");
       }
     });
   };
@@ -124,7 +124,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
           <DialogTrigger asChild>
             <Button className="w-full" disabled={!canAfford || isPurchasing}>
               <Zap className="mr-2 h-4 w-4" />
-              {isPurchasing ? "Processing..." : canAfford ? "Purchase plan" : "Insufficient balance"}
+              {isPurchasing ? "Processing..." : canAfford ? "Purchase Package" : "Insufficient balance"}
             </Button>
           </DialogTrigger>
           <DialogContent>

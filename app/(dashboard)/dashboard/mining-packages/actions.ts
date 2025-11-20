@@ -20,7 +20,7 @@ export async function purchasePlan(input: {
   const convex = getConvexClient();
   await convex.mutation(api.plans.purchasePlan, input);
 
-  revalidatePath("/dashboard/plans");
+  revalidatePath("/dashboard/mining-packages");
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/mining");
 }

@@ -10,7 +10,7 @@ import {
 import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 
-export default async function PlansPage() {
+export default async function MiningPackagesPage() {
   const current = await getCurrentUser();
   if (!current) {
     return null;
@@ -27,7 +27,7 @@ export default async function PlansPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Hash rate plans</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Mining Packages</h1>
         <p className="text-sm text-muted-foreground">
           Browse curated mining contracts with transparent pricing, estimated returns, and
           supported coins.
@@ -37,7 +37,7 @@ export default async function PlansPage() {
       <Card className="border-border/60 bg-card/80">
         <CardHeader>
           <CardTitle>Your platform balance</CardTitle>
-          <CardDescription>Available funds for purchasing plans</CardDescription>
+          <CardDescription>Available funds for purchasing mining packages</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">

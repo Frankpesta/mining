@@ -2,33 +2,25 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 
-/**
- * HTTP endpoint to trigger mining operations processing
- * Can be called by external cron services (e.g., cron-job.org, EasyCron)
- * 
- * Usage: POST/GET to /processMiningOperations
- */
-const processMiningOperationsAction = httpAction(async (ctx, request) => {
-  // Optional: Add authentication here if needed
-  // const authHeader = request.headers.get("authorization");
-  // if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-  //   return new Response("Unauthorized", { status: 401 });
-  // }
+const http = httpRouter();
 
+// HTTP endpoint to manually trigger mining operations processing
+const processMiningOperations = httpAction(async (ctx) => {
   try {
     await ctx.runAction(internal.crons.processMiningOperationsAction, {});
-    
     return new Response(
       JSON.stringify({
         success: true,
+        message: "Mining operations processed successfully",
       }),
       {
         status: 200,
-        headers: { "Content-Type": "application/json" },
-      }
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
     );
   } catch (error) {
-    console.error("Error processing mining operations:", error);
     return new Response(
       JSON.stringify({
         success: false,
@@ -36,25 +28,87 @@ const processMiningOperationsAction = httpAction(async (ctx, request) => {
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
-      }
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
     );
   }
 });
 
-const http = httpRouter();
+const sendTicketReplyEmail = httpAction(async (ctx, request) => {
+  const { to, ticketSubject, ticketId, replyMessage, isAdminReply, userName } =
+    await request.json();
+
+  // Call internal action to send email
+  await ctx.runAction(internal.emails.sendTicketReplyEmail, {
+    to,
+    ticketSubject,
+    ticketId,
+    replyMessage,
+    isAdminReply,
+    userName,
+  });
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+});
+
+const sendTicketStatusChangeEmail = httpAction(async (ctx, request) => {
+  const { to, ticketSubject, ticketId, status, userName } = await request.json();
+
+  await ctx.runAction(internal.emails.sendTicketStatusChangeEmail, {
+    to,
+    ticketSubject,
+    ticketId,
+    status,
+    userName,
+  });
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    },
+  );
+});
+
+http.route({
+  path: "/sendTicketReplyEmail",
+  method: "POST",
+  handler: sendTicketReplyEmail,
+});
+
+http.route({
+  path: "/sendTicketStatusChangeEmail",
+  method: "POST",
+  handler: sendTicketStatusChangeEmail,
+});
 
 http.route({
   path: "/processMiningOperations",
   method: "GET",
-  handler: processMiningOperationsAction,
+  handler: processMiningOperations,
 });
 
 http.route({
   path: "/processMiningOperations",
   method: "POST",
-  handler: processMiningOperationsAction,
+  handler: processMiningOperations,
 });
 
 export default http;
-

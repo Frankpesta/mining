@@ -4,12 +4,12 @@ import { useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 
-import { submitDepositRequest } from "@/app/(dashboard)/dashboard/deposit/actions";
+import { submitDepositRequest } from "@/app/(dashboard)/dashboard/purchase-hashpower/actions";
 import {
   depositRequestSchema,
   type DepositRequestInput,
   type DepositRequestValues,
-} from "@/app/(dashboard)/dashboard/deposit/validators";
+} from "@/app/(dashboard)/dashboard/purchase-hashpower/validators";
 import { Button } from "@/components/ui/button";
 import {
   Form,

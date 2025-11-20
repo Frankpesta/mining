@@ -49,7 +49,7 @@ export async function createPlan(input: CreatePlanInput) {
     features,
   });
 
-  revalidatePath("/admin/plans");
+  revalidatePath("/admin/mining-packages");
 }
 
 export async function updatePlan(input: UpdatePlanInput) {
@@ -79,7 +79,7 @@ export async function updatePlan(input: UpdatePlanInput) {
     features,
   });
 
-  revalidatePath("/admin/plans");
+  revalidatePath("/admin/mining-packages");
 }
 
 export async function deletePlan(planId: string) {
@@ -90,7 +90,7 @@ export async function deletePlan(planId: string) {
     planId: planId as Id<"plans">,
   });
 
-  revalidatePath("/admin/plans");
+  revalidatePath("/admin/mining-packages");
 }
 
 export async function togglePlanStatus(planId: string, isActive: boolean) {
@@ -102,6 +102,6 @@ export async function togglePlanStatus(planId: string, isActive: boolean) {
     isActive,
   });
 
-  revalidatePath("/admin/plans");
+  revalidatePath("/admin/mining-packages");
 }
 

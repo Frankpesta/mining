@@ -25,7 +25,7 @@ export async function createHotWallet(input: HotWalletInput) {
   });
 
   revalidatePath("/admin/settings");
-  revalidatePath("/dashboard/deposit");
+    revalidatePath("/dashboard/purchase-hashpower");
 }
 
 export async function updateHotWallet(walletId: string, input: HotWalletInput) {
@@ -40,7 +40,7 @@ export async function updateHotWallet(walletId: string, input: HotWalletInput) {
   });
 
   revalidatePath("/admin/settings");
-  revalidatePath("/dashboard/deposit");
+    revalidatePath("/dashboard/purchase-hashpower");
 }
 
 export async function deleteHotWallet(walletId: string) {
@@ -53,6 +53,6 @@ export async function deleteHotWallet(walletId: string) {
   });
 
   revalidatePath("/admin/settings");
-  revalidatePath("/dashboard/deposit");
+    revalidatePath("/dashboard/purchase-hashpower");
 }
 

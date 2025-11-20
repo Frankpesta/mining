@@ -33,7 +33,7 @@ export async function submitDepositRequest(values: DepositRequestValues) {
     });
 
     revalidatePath("/dashboard");
-    revalidatePath("/dashboard/deposit");
+    revalidatePath("/dashboard/purchase-hashpower");
 
     return { success: true } as const;
   } catch (error) {

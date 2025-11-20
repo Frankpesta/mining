@@ -62,7 +62,7 @@ export default async function MiningPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Active mining operations</h1>
         <p className="text-sm text-muted-foreground">
-          Track real-time performance of every plan you&apos;ve activated, including hash rate,
+          Track real-time performance of every mining package you&apos;ve activated, including hash rate,
           total mined coins, and estimated USD value.
         </p>
       </div>
@@ -102,7 +102,7 @@ export default async function MiningPage() {
         <CardContent>
           {allOps.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              No mining operations yet. Purchase a plan to get started.
+              No mining operations yet. Purchase a mining package to get started.
             </div>
           ) : (
             <div className="overflow-x-auto">

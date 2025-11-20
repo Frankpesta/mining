@@ -7,12 +7,13 @@ import { getCurrentUser } from "@/lib/auth/session";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: "home" },
-  { href: "/dashboard/deposit", label: "Deposit", icon: "wallet" },
-  { href: "/dashboard/plans", label: "Plans", icon: "layers" },
+  { href: "/dashboard/purchase-hashpower", label: "Purchase HashPower", icon: "wallet" },
+  { href: "/dashboard/mining-packages", label: "Mining Packages", icon: "layers" },
   { href: "/dashboard/mining", label: "Mining Ops", icon: "gauge" },
   { href: "/dashboard/activity", label: "Activity", icon: "chart-line" },
   { href: "/dashboard/wallet", label: "Wallet", icon: "coins" },
   { href: "/dashboard/withdraw", label: "Withdraw", icon: "waypoints" },
+  { href: "/dashboard/tickets", label: "Support", icon: "message-square" },
   { href: "/dashboard/profile", label: "Profile", icon: "users" },
 ] satisfies SidebarNavItem[];
 

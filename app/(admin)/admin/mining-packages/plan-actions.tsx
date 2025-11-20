@@ -51,9 +51,9 @@ export function PlanActions({ plan }: PlanActionsProps) {
     startDelete(async () => {
       try {
         await deletePlan(plan._id);
-        toast.success("Plan deleted successfully");
+        toast.success("Mining package deleted successfully");
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to delete plan");
+        toast.error(error instanceof Error ? error.message : "Failed to delete mining package");
       }
     });
   };
@@ -61,9 +61,9 @@ export function PlanActions({ plan }: PlanActionsProps) {
   const handleToggleStatus = async () => {
     try {
       await togglePlanStatus(plan._id, !plan.isActive);
-      toast.success(`Plan ${plan.isActive ? "deactivated" : "activated"} successfully`);
+      toast.success(`Mining package ${plan.isActive ? "deactivated" : "activated"} successfully`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update plan status");
+      toast.error(error instanceof Error ? error.message : "Failed to update mining package status");
     }
   };
 
@@ -95,8 +95,8 @@ export function PlanActions({ plan }: PlanActionsProps) {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit plan</DialogTitle>
-            <DialogDescription>Update plan details and settings.</DialogDescription>
+            <DialogTitle>Edit mining package</DialogTitle>
+            <DialogDescription>Update mining package details and settings.</DialogDescription>
           </DialogHeader>
           <PlanForm
             planId={plan._id}
@@ -114,10 +114,10 @@ export function PlanActions({ plan }: PlanActionsProps) {
             onSubmit={async (values) => {
               try {
                 await updatePlan({ ...values, planId: plan._id });
-                toast.success("Plan updated successfully");
+                toast.success("Mining package updated successfully");
                 setIsEditOpen(false);
               } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Failed to update plan");
+                toast.error(error instanceof Error ? error.message : "Failed to update mining package");
               }
             }}
             onCancel={() => setIsEditOpen(false)}
