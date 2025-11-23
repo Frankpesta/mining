@@ -7,18 +7,27 @@ export default async function VerifyEmailPage({
 }: {
   searchParams: { token?: string };
 }) {
-  const token = searchParams?.token;
+  const rawToken = searchParams?.token;
 
-  if (!token) {
+  if (!rawToken) {
     return <InvalidToken message="Missing verification token." />;
   }
+
+  // Decode the token in case it's URL-encoded
+  const token = decodeURIComponent(rawToken);
 
   let verificationError: string | null = null;
   try {
     await verifyEmailByToken(token);
   } catch (error) {
-    verificationError =
-      error instanceof Error ? error.message : "Unable to verify email address.";
+    // Handle ConvexError and regular Error instances
+    if (error instanceof Error) {
+      verificationError = error.message;
+    } else if (error && typeof error === "object" && "message" in error) {
+      verificationError = String(error.message);
+    } else {
+      verificationError = "Unable to verify email address.";
+    }
   }
 
   if (verificationError) {

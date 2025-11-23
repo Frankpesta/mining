@@ -7,9 +7,9 @@ export default function ResetPasswordPage({
 }: {
   searchParams: { token?: string };
 }) {
-  const token = searchParams?.token;
+  const rawToken = searchParams?.token;
 
-  if (!token) {
+  if (!rawToken) {
     return (
       <div className="space-y-6 text-center">
         <div className="space-y-2">
@@ -35,6 +35,9 @@ export default function ResetPasswordPage({
       </div>
     );
   }
+
+  // Decode the token in case it's URL-encoded
+  const token = decodeURIComponent(rawToken);
 
   return <ResetPasswordForm token={token} />;
 }

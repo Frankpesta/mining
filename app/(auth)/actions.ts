@@ -329,8 +329,10 @@ export async function resetPasswordAction(
 
   try {
     const passwordHash = await hashPassword(parsed.data.password);
+    // Trim the token to handle any whitespace issues
+    const token = parsed.data.token.trim();
     await convex.mutation(api.users.consumeResetToken, {
-      token: parsed.data.token,
+      token,
       passwordHash,
     });
     return {
@@ -338,7 +340,12 @@ export async function resetPasswordAction(
       message: "Password reset successfully. You can now log in.",
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "";
+    // Handle ConvexError and regular Error instances
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : (error && typeof error === "object" && "message" in error)
+        ? String(error.message)
+        : "";
     let message = "Unable to reset password.";
     
     if (errorMessage.includes("expired")) {
@@ -358,11 +365,27 @@ export async function resetPasswordAction(
 }
 
 export async function verifyEmailByToken(token: string) {
+  if (!token || token.trim().length === 0) {
+    throw new Error("Verification token is required");
+  }
+
   const convex = getConvexClient();
-  const userId = (await convex.mutation(api.users.consumeVerificationToken, {
-    token,
-  })) as Id<"users">;
-  return userId;
+  try {
+    const userId = (await convex.mutation(api.users.consumeVerificationToken, {
+      token: token.trim(),
+    })) as Id<"users">;
+    return userId;
+  } catch (error) {
+    // Re-throw ConvexError and other errors with their original messages
+    if (error instanceof Error) {
+      throw error;
+    }
+    // Handle Convex error objects that might not be Error instances
+    if (error && typeof error === "object" && "message" in error) {
+      throw new Error(String(error.message));
+    }
+    throw new Error("Unable to verify email address. Please try again.");
+  }
 }
 
 export async function resendVerificationEmailAction(
