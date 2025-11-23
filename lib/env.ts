@@ -6,11 +6,8 @@ export function getAppBaseUrl() {
     return appUrl;
   }
 
-  const vercelUrl = process.env.VERCEL_URL;
-  if (vercelUrl) {
-    return vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`;
-  }
-
+  // Always use the default app URL instead of VERCEL_URL
+  // to ensure emails contain the correct production URL
   return DEFAULT_APP_URL;
 }
 
