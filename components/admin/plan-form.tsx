@@ -24,11 +24,16 @@ const planFormSchema = z.object({
   hashRate: z.number().positive("Hash rate must be positive"),
   hashRateUnit: z.enum(["TH/s", "GH/s", "MH/s"]),
   duration: z.number().positive("Duration must be positive"),
+  minPriceUSD: z.number().positive("Minimum price must be positive"),
+  maxPriceUSD: z.number().positive("Maximum price must be positive").optional(),
   priceUSD: z.number().positive("Price must be positive"),
   supportedCoins: z.string().min(1, "At least one coin is required"),
+  minDailyROI: z.number().positive("Minimum daily ROI must be positive"),
+  maxDailyROI: z.number().positive("Maximum daily ROI must be positive"),
   estimatedDailyEarning: z.number().nonnegative("Daily earning must be non-negative"),
   isActive: z.boolean(),
   features: z.string().min(1, "At least one feature is required"),
+  idealFor: z.string().optional(),
 });
 
 type PlanFormValues = z.infer<typeof planFormSchema>;
@@ -50,11 +55,16 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
       hashRate: initialValues?.hashRate ?? 0,
       hashRateUnit: initialValues?.hashRateUnit ?? "TH/s",
       duration: initialValues?.duration ?? 30,
+      minPriceUSD: initialValues?.minPriceUSD ?? 0,
+      maxPriceUSD: initialValues?.maxPriceUSD,
       priceUSD: initialValues?.priceUSD ?? 0,
       supportedCoins: initialValues?.supportedCoins ?? "",
+      minDailyROI: initialValues?.minDailyROI ?? 0,
+      maxDailyROI: initialValues?.maxDailyROI ?? 0,
       estimatedDailyEarning: initialValues?.estimatedDailyEarning ?? 0,
       isActive: initialValues?.isActive ?? true,
       features: initialValues?.features ?? "",
+      idealFor: initialValues?.idealFor ?? "",
     },
   });
 
@@ -94,10 +104,10 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
 
           <FormField
             control={form.control}
-            name="priceUSD"
+            name="minPriceUSD"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Price (USD)</FormLabel>
+                <FormLabel>Min Price (USD)</FormLabel>
                 <FormControl>
                   <Input
                     {...field}
@@ -106,6 +116,48 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
                 </FormControl>
+                <FormDescription>Minimum entry amount</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="maxPriceUSD"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Max Price (USD)</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="number"
+                    step="0.01"
+                    value={field.value ?? ""}
+                    onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+                  />
+                </FormControl>
+                <FormDescription>Maximum entry amount (leave empty for unlimited)</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="priceUSD"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Display Price (USD)</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="number"
+                    step="0.01"
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                  />
+                </FormControl>
+                <FormDescription>Default/display price</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -171,6 +223,48 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
             )}
           />
 
+          <div className="flex gap-4">
+            <FormField
+              control={form.control}
+              name="minDailyROI"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Min Daily ROI (%)</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      step="0.01"
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormDescription>Minimum daily ROI percentage</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="maxDailyROI"
+              render={({ field }) => (
+                <FormItem className="flex-1">
+                  <FormLabel>Max Daily ROI (%)</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type="number"
+                      step="0.01"
+                      onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    />
+                  </FormControl>
+                  <FormDescription>Maximum daily ROI percentage</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
             name="estimatedDailyEarning"
@@ -185,7 +279,22 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
                     onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                   />
                 </FormControl>
-                <FormDescription>Estimated daily earnings in USD</FormDescription>
+                <FormDescription>Estimated daily earnings in USD (for display)</FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="idealFor"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Ideal For</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="e.g., small investors, corporate investors" />
+                </FormControl>
+                <FormDescription>Target audience description</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

@@ -12,11 +12,16 @@ type CreatePlanInput = {
   hashRate: number;
   hashRateUnit: "TH/s" | "GH/s" | "MH/s";
   duration: number;
+  minPriceUSD: number;
+  maxPriceUSD?: number;
   priceUSD: number;
   supportedCoins: string;
+  minDailyROI: number;
+  maxDailyROI: number;
   estimatedDailyEarning: number;
   isActive: boolean;
   features: string;
+  idealFor?: string;
 };
 
 type UpdatePlanInput = CreatePlanInput & {
@@ -42,11 +47,16 @@ export async function createPlan(input: CreatePlanInput) {
     hashRate: input.hashRate,
     hashRateUnit: input.hashRateUnit,
     duration: input.duration,
+    minPriceUSD: input.minPriceUSD,
+    maxPriceUSD: input.maxPriceUSD,
     priceUSD: input.priceUSD,
     supportedCoins,
+    minDailyROI: input.minDailyROI,
+    maxDailyROI: input.maxDailyROI,
     estimatedDailyEarning: input.estimatedDailyEarning,
     isActive: input.isActive,
     features,
+    idealFor: input.idealFor,
   });
 
   revalidatePath("/admin/mining-packages");
@@ -72,11 +82,16 @@ export async function updatePlan(input: UpdatePlanInput) {
     hashRate: input.hashRate,
     hashRateUnit: input.hashRateUnit,
     duration: input.duration,
+    minPriceUSD: input.minPriceUSD,
+    maxPriceUSD: input.maxPriceUSD,
     priceUSD: input.priceUSD,
     supportedCoins,
+    minDailyROI: input.minDailyROI,
+    maxDailyROI: input.maxDailyROI,
     estimatedDailyEarning: input.estimatedDailyEarning,
     isActive: input.isActive,
     features,
+    idealFor: input.idealFor,
   });
 
   revalidatePath("/admin/mining-packages");
