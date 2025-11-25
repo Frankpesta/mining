@@ -5,9 +5,10 @@ import { verifyEmailByToken } from "@/app/(auth)/actions";
 export default async function VerifyEmailPage({
   searchParams,
 }: {
-  searchParams: { token?: string };
+  searchParams: Promise<{ token?: string }>;
 }) {
-  const rawToken = searchParams?.token;
+  const params = await searchParams;
+  const rawToken = params?.token;
 
   if (!rawToken) {
     return <InvalidToken message="Missing verification token." />;

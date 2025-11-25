@@ -2,12 +2,13 @@ import Link from "next/link";
 
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
-export default function ResetPasswordPage({
+export default async function ResetPasswordPage({
   searchParams,
 }: {
-  searchParams: { token?: string };
+  searchParams: Promise<{ token?: string }>;
 }) {
-  const rawToken = searchParams?.token;
+  const params = await searchParams;
+  const rawToken = params?.token;
 
   if (!rawToken) {
     return (

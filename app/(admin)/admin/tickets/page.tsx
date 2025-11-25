@@ -28,8 +28,9 @@ type Ticket = {
 export default async function AdminTicketsPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams: Promise<{ status?: string }>;
 }) {
+  const params = await searchParams;
   const current = await getCurrentUser();
   if (!current || current.user.role !== "admin") {
     redirect("/dashboard");
@@ -37,7 +38,7 @@ export default async function AdminTicketsPage({
 
   const convex = getConvexClient();
   const ticketsData = await convex.query(api.tickets.getAllTickets, {
-    status: searchParams.status as
+    status: params.status as
       | "open"
       | "in_progress"
       | "resolved"

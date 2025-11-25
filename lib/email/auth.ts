@@ -18,7 +18,7 @@ export async function sendVerificationEmail({
   token: string;
 }) {
   const client = getResendClient();
-  const url = `${getAppBaseUrl()}/auth/verify-email?token=${token}`;
+  const url = `${getAppBaseUrl()}/auth/verify-email?token=${encodeURIComponent(token)}`;
 
   if (!client) {
     console.info(
@@ -50,7 +50,7 @@ export async function sendPasswordResetEmail({
   token: string;
 }) {
   const client = getResendClient();
-  const url = `${getAppBaseUrl()}/auth/reset-password?token=${token}`;
+  const url = `${getAppBaseUrl()}/auth/reset-password?token=${encodeURIComponent(token)}`;
 
   if (!client) {
     console.info(
