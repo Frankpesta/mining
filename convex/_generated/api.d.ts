@@ -15,6 +15,7 @@ import type * as deposits from "../deposits.js";
 import type * as emails from "../emails.js";
 import type * as hotWallets from "../hotWallets.js";
 import type * as http from "../http.js";
+import type * as initPlans from "../initPlans.js";
 import type * as migrations from "../migrations.js";
 import type * as miningOperations from "../miningOperations.js";
 import type * as notifications from "../notifications.js";
@@ -52,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   hotWallets: typeof hotWallets;
   http: typeof http;
+  initPlans: typeof initPlans;
   migrations: typeof migrations;
   miningOperations: typeof miningOperations;
   notifications: typeof notifications;

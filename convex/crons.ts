@@ -4,8 +4,17 @@ import { internal, api } from "./_generated/api";
 import { v } from "convex/values";
 
 /**
+ * Helper function to get start of day timestamp (UTC)
+ */
+function getStartOfDayUTC(timestamp: number): number {
+  const date = new Date(timestamp);
+  date.setUTCHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+/**
  * Internal mutation to process mining operations
- * This processes all active mining operations and updates earnings
+ * This processes all active mining operations and distributes daily profits based on ROI
  * Receives prices as a parameter since mutations can't fetch
  */
 export const processMiningOperationsMutation = internalMutation({
@@ -15,13 +24,15 @@ export const processMiningOperationsMutation = internalMutation({
   handler: async (ctx, args) => {
     const prices = args.prices ?? {};
     const now = Date.now();
-    // Get all active operations (we'll filter by status in the loop since index might not exist)
+    const todayStart = getStartOfDayUTC(now);
+    
+    // Get all active operations
     const allOperations = await ctx.db.query("miningOperations").collect();
     const activeOperations = allOperations.filter((op) => op.status === "active");
 
     let processed = 0;
     let completed = 0;
-    let earningsUpdated = 0;
+    let payoutsDistributed = 0;
 
     for (const operation of activeOperations) {
       // Check if operation has expired
@@ -30,116 +41,58 @@ export const processMiningOperationsMutation = internalMutation({
         await ctx.db.patch(operation._id, {
           status: "completed",
         });
-
-        // Calculate final earnings for the remaining time
-        // operation.currentRate is in USD per day
-        const elapsedMs = operation.endTime - operation.startTime;
-        const elapsedDays = elapsedMs / (24 * 60 * 60 * 1000);
-        const finalEarningsUSD = operation.currentRate * elapsedDays;
-
-        // Update user balance with final earnings
-        // Mining earnings are paid out to platform balance for withdrawal
-        const user = await ctx.db.get(operation.userId);
-        if (user) {
-          const coin = operation.coin;
-          
-          // Get real-time price for the coin (from prices map passed from action)
-          const coinPrice = prices[coin.toUpperCase()] ?? 0;
-          
-          // Convert USD earnings to coin amount
-          const finalEarningsCoin = coinPrice > 0 ? finalEarningsUSD / coinPrice : 0;
-          
-          // Calculate delta (operation.totalMined is already in coin amount)
-          const earningsDeltaCoin = finalEarningsCoin - operation.totalMined;
-          
-          if (earningsDeltaCoin > 0) {
-            const coinAmount = earningsDeltaCoin;
-            
-            if (coinAmount > 0) {
-              // Update platform balance with the coin being mined
-              // For stablecoins (USDT, USDC), use 1:1 conversion
-              if (coin === "USDT" || coin === "USDC") {
-                const earningsDeltaUSD = coinAmount * coinPrice;
-                await ctx.db.patch(operation.userId, {
-                  platformBalance: {
-                    ...user.platformBalance,
-                    [coin]: (user.platformBalance[coin as "USDT" | "USDC"] ?? 0) + earningsDeltaUSD,
-                  },
-                });
-              } else {
-                // For other coins, add to platform balance
-                const currentBalance = (user.platformBalance as any)[coin] ?? 0;
-                await ctx.db.patch(operation.userId, {
-                  platformBalance: {
-                    ...user.platformBalance,
-                    [coin]: currentBalance + coinAmount,
-                  } as any,
-                });
-              }
-
-              // Also update mining balance for tracking purposes
-              if (coin === "BTC" || coin === "ETH" || coin === "LTC") {
-                const coreCoin = coin as "BTC" | "ETH" | "LTC";
-                await ctx.db.patch(operation.userId, {
-                  miningBalance: {
-                    ...user.miningBalance,
-                    [coreCoin]: (user.miningBalance[coreCoin] ?? 0) + coinAmount,
-                  },
-                });
-              } else {
-                const currentMining = (user.miningBalance as any)[coin] ?? 0;
-                await ctx.db.patch(operation.userId, {
-                  miningBalance: {
-                    ...user.miningBalance,
-                    [coin]: currentMining + coinAmount,
-                  } as any,
-                });
-              }
-
-              // Update operation with final earnings (in coin amount)
-              await ctx.db.patch(operation._id, {
-                totalMined: finalEarningsCoin,
-              });
-              earningsUpdated++;
-            }
-          }
-        }
-
         completed++;
         processed++;
         continue;
       }
 
-      // Calculate earnings based on elapsed time
-      // operation.currentRate is in USD per day
-      const elapsedMs = now - operation.startTime;
-      const elapsedDays = elapsedMs / (24 * 60 * 60 * 1000);
-      const expectedEarningsUSD = operation.currentRate * elapsedDays;
+      // Check if we've already paid out today
+      const lastPayoutDate = operation.lastPayoutDate;
+      if (lastPayoutDate && getStartOfDayUTC(lastPayoutDate) === todayStart) {
+        // Already paid out today, skip
+        processed++;
+        continue;
+      }
 
-      // Get real-time price for the coin (from prices map passed from action)
+      // Calculate daily profit based on ROI percentage
+      // operation.currentRate is the daily ROI percentage (e.g., 0.5 for 0.5%)
+      // operation.purchaseAmount is the amount invested
+      // If purchaseAmount doesn't exist (old operations), skip or use a default
+      const purchaseAmount = operation.purchaseAmount ?? 0;
+      if (purchaseAmount <= 0) {
+        console.warn(`[processMiningOperations] Operation ${operation._id} has no purchaseAmount, skipping`);
+        processed++;
+        continue;
+      }
+      
+      const dailyProfitUSD = (operation.currentRate / 100) * purchaseAmount;
+
+      // Get real-time price for the coin
       const coinPrice = prices[operation.coin.toUpperCase()] ?? 0;
       
-      // Convert USD earnings to coin amount
-      const expectedEarningsCoin = coinPrice > 0 ? expectedEarningsUSD / coinPrice : 0;
+      if (coinPrice <= 0) {
+        // Skip if we don't have a valid price
+        console.warn(`[processMiningOperations] No price available for ${operation.coin}, skipping operation ${operation._id}`);
+        processed++;
+        continue;
+      }
 
-      // Only update if there's a meaningful difference (at least 0.0001)
-      if (Math.abs(expectedEarningsCoin - operation.totalMined) >= 0.0001) {
-        const balanceDeltaCoin = expectedEarningsCoin - operation.totalMined;
+      // Convert USD profit to coin amount
+      const dailyProfitCoin = dailyProfitUSD / coinPrice;
 
+      if (dailyProfitCoin > 0) {
         // Update user balance
-        // Mining earnings are paid out to platform balance for withdrawal
         const user = await ctx.db.get(operation.userId);
-        if (user && balanceDeltaCoin > 0) {
+        if (user) {
           const coin = operation.coin;
           
           // Update platform balance with the coin being mined
           // For stablecoins (USDT, USDC), use 1:1 conversion
           if (coin === "USDT" || coin === "USDC") {
-            const balanceDeltaUSD = balanceDeltaCoin * coinPrice;
             await ctx.db.patch(operation.userId, {
               platformBalance: {
                 ...user.platformBalance,
-                [coin]: (user.platformBalance[coin as "USDT" | "USDC"] ?? 0) + balanceDeltaUSD,
+                [coin]: (user.platformBalance[coin as "USDT" | "USDC"] ?? 0) + dailyProfitUSD,
               },
             });
           } else {
@@ -148,7 +101,7 @@ export const processMiningOperationsMutation = internalMutation({
             await ctx.db.patch(operation.userId, {
               platformBalance: {
                 ...user.platformBalance,
-                [coin]: currentBalance + balanceDeltaCoin,
+                [coin]: currentBalance + dailyProfitCoin,
               } as any,
             });
           }
@@ -159,7 +112,7 @@ export const processMiningOperationsMutation = internalMutation({
             await ctx.db.patch(operation.userId, {
               miningBalance: {
                 ...user.miningBalance,
-                [coreCoin]: (user.miningBalance[coreCoin] ?? 0) + balanceDeltaCoin,
+                [coreCoin]: (user.miningBalance[coreCoin] ?? 0) + dailyProfitCoin,
               },
             });
           } else {
@@ -167,16 +120,18 @@ export const processMiningOperationsMutation = internalMutation({
             await ctx.db.patch(operation.userId, {
               miningBalance: {
                 ...user.miningBalance,
-                [coin]: currentMining + balanceDeltaCoin,
+                [coin]: currentMining + dailyProfitCoin,
               } as any,
             });
           }
 
-          // Update operation earnings (in coin amount)
+          // Update operation: add to totalMined and set lastPayoutDate
           await ctx.db.patch(operation._id, {
-            totalMined: expectedEarningsCoin,
+            totalMined: operation.totalMined + dailyProfitUSD, // Store in USD for tracking
+            lastPayoutDate: todayStart,
           });
-          earningsUpdated++;
+
+          payoutsDistributed++;
         }
       }
 
@@ -186,7 +141,7 @@ export const processMiningOperationsMutation = internalMutation({
     return {
       processed,
       completed,
-      earningsUpdated,
+      payoutsDistributed,
       timestamp: now,
     };
   },
@@ -238,22 +193,14 @@ export const processMiningOperationsAction = internalAction({
  */
 const crons = cronJobs();
 
-// Run every hour at minute 0 (e.g., 1:00, 2:00, 3:00, etc.)
-crons.hourly(
+// Run daily at 00:00 UTC (midnight UTC) to distribute daily mining profits
+crons.daily(
   "processMiningOperations",
   {
-    minuteUTC: 0, // Run at minute 0 of every hour (UTC)
+    hourUTC: 0, // Run at midnight UTC (00:00)
+    minuteUTC: 0,
   },
   internal.crons.processMiningOperationsAction,
 );
-
-// Optional: Run every 15 minutes for more frequent updates (uncomment if needed)
-// crons.interval(
-//   "processMiningOperationsFrequent",
-//   {
-//     seconds: 15 * 60, // 15 minutes
-//   },
-//   internal.crons.processMiningOperationsAction,
-// );
 
 export default crons;

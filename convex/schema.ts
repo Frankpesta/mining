@@ -118,12 +118,17 @@ export default defineSchema({
     name: v.string(),
     hashRate: v.number(),
     hashRateUnit: v.union(v.literal("TH/s"), v.literal("GH/s"), v.literal("MH/s")),
-    duration: v.number(),
-    priceUSD: v.number(),
+    duration: v.number(), // Duration in days
+    minPriceUSD: v.optional(v.number()), // Minimum entry amount
+    maxPriceUSD: v.optional(v.number()), // Maximum entry amount (optional for unlimited)
+    priceUSD: v.number(), // Default/display price (required for backward compatibility)
     supportedCoins: v.array(v.string()),
-    estimatedDailyEarning: v.number(),
+    minDailyROI: v.optional(v.number()), // Minimum daily ROI percentage (e.g., 0.5 for 0.5%)
+    maxDailyROI: v.optional(v.number()), // Maximum daily ROI percentage (e.g., 0.7 for 0.7%)
+    estimatedDailyEarning: v.number(), // Average daily earning (for display)
     isActive: v.boolean(),
     features: v.array(v.string()),
+    idealFor: v.optional(v.string()), // Target audience description
     createdAt: v.number(),
     updatedAt: v.number(),
     order: v.number(),
@@ -137,10 +142,12 @@ export default defineSchema({
     coin: v.string(),
     hashRate: v.number(),
     hashRateUnit: v.string(),
+    purchaseAmount: v.number(), // The actual amount paid for this operation (for ROI calculation)
     startTime: v.number(),
     endTime: v.number(),
-    totalMined: v.number(),
-    currentRate: v.number(),
+    totalMined: v.number(), // Total earnings accumulated (in USD)
+    currentRate: v.number(), // Current daily ROI rate (percentage)
+    lastPayoutDate: v.optional(v.number()), // Last date profits were paid out (timestamp at start of day)
     status: v.union(v.literal("active"), v.literal("completed"), v.literal("paused")),
     pausedBy: v.optional(v.id("users")),
     createdAt: v.number(),

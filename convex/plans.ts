@@ -31,12 +31,17 @@ export const createPlan = mutation({
     name: v.string(),
     hashRate: v.number(),
     hashRateUnit: v.union(v.literal("TH/s"), v.literal("GH/s"), v.literal("MH/s")),
-    duration: v.number(),
-    priceUSD: v.number(),
+    duration: v.number(), // Duration in days
+    minPriceUSD: v.number(),
+    maxPriceUSD: v.optional(v.number()),
+    priceUSD: v.number(), // Default/display price
     supportedCoins: v.array(v.string()),
-    estimatedDailyEarning: v.number(),
+    minDailyROI: v.number(), // Minimum daily ROI percentage
+    maxDailyROI: v.number(), // Maximum daily ROI percentage
+    estimatedDailyEarning: v.number(), // Average daily earning
     isActive: v.boolean(),
     features: v.array(v.string()),
+    idealFor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const existingPlans = await ctx.db.query("plans").collect();
@@ -62,11 +67,16 @@ export const updatePlan = mutation({
     hashRate: v.optional(v.number()),
     hashRateUnit: v.optional(v.union(v.literal("TH/s"), v.literal("GH/s"), v.literal("MH/s"))),
     duration: v.optional(v.number()),
+    minPriceUSD: v.optional(v.number()),
+    maxPriceUSD: v.optional(v.number()),
     priceUSD: v.optional(v.number()),
     supportedCoins: v.optional(v.array(v.string())),
+    minDailyROI: v.optional(v.number()),
+    maxDailyROI: v.optional(v.number()),
     estimatedDailyEarning: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     features: v.optional(v.array(v.string())),
+    idealFor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { planId, ...updates } = args;
@@ -159,29 +169,53 @@ export const purchasePlan = mutation({
     const totalBalance =
       user.platformBalance.ETH + user.platformBalance.USDT + user.platformBalance.USDC;
 
-    if (totalBalance < plan.priceUSD) {
-      throw new ConvexError("Insufficient platform balance");
+    // Use minPriceUSD as minimum, or priceUSD if minPriceUSD doesn't exist (backward compatibility)
+    const minPrice = plan.minPriceUSD ?? plan.priceUSD;
+    if (totalBalance < minPrice) {
+      throw new ConvexError(`Insufficient platform balance. Minimum required: $${minPrice.toFixed(2)}`);
+    }
+
+    // Determine purchase amount
+    // If maxPriceUSD is set and user has more than max, use max
+    // Otherwise, use the user's total balance (as long as it's >= min)
+    let purchaseAmount = totalBalance;
+    if (plan.maxPriceUSD !== undefined && totalBalance > plan.maxPriceUSD) {
+      purchaseAmount = plan.maxPriceUSD;
     }
 
     const now = Date.now();
+    // Duration is in days, convert to milliseconds
     const endTime = now + plan.duration * 24 * 60 * 60 * 1000;
 
+    // Calculate initial daily ROI rate (randomized within range if available, otherwise use estimatedDailyEarning)
+    let randomROI: number;
+    if (plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined) {
+      const roiRange = plan.maxDailyROI - plan.minDailyROI;
+      randomROI = plan.minDailyROI + Math.random() * roiRange;
+    } else {
+      // Fallback: calculate ROI from estimatedDailyEarning and purchaseAmount
+      // This is for backward compatibility with old plans
+      randomROI = (plan.estimatedDailyEarning / purchaseAmount) * 100;
+    }
+    
     const operationId = await ctx.db.insert("miningOperations", {
       userId: args.userId,
       planId: args.planId,
       coin: args.coin,
       hashRate: plan.hashRate,
       hashRateUnit: plan.hashRateUnit,
+      purchaseAmount,
       startTime: now,
       endTime,
       totalMined: 0,
-      currentRate: plan.estimatedDailyEarning,
+      currentRate: randomROI, // Store daily ROI percentage
+      lastPayoutDate: undefined, // Will be set on first payout
       status: "active",
       pausedBy: undefined,
       createdAt: now,
     });
 
-    let remainingCost = plan.priceUSD;
+    let remainingCost = purchaseAmount;
     const balanceUpdates: Partial<typeof user.platformBalance> = {};
 
     if (user.platformBalance.USDC >= remainingCost) {
@@ -223,6 +257,7 @@ export const purchasePlan = mutation({
         planId: args.planId,
         planName: plan.name,
         coin: args.coin,
+        purchaseAmount,
         priceUSD: plan.priceUSD,
       },
       createdAt: now,
