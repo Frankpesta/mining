@@ -73,7 +73,7 @@ export default async function AdminMiningPackagesPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[1100px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>

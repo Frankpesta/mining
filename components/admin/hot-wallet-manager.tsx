@@ -225,7 +225,7 @@ export function HotWalletManager({ initialWallets }: HotWalletManagerProps) {
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[720px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Cryptocurrency</TableHead>
