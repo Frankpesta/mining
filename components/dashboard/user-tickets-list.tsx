@@ -84,7 +84,7 @@ export function UserTicketsList({
       </CardHeader>
       <CardContent>
         <div className="rounded-md border">
-          <Table>
+          <Table className="min-w-[720px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Subject</TableHead>

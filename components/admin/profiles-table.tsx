@@ -36,7 +36,7 @@ export function ProfilesTable({ profiles }: { profiles: Profile[] }) {
 
   return (
     <div className="overflow-x-auto">
-      <Table>
+      <Table className="min-w-[880px]">
         <TableHeader>
           <TableRow>
             <TableHead>Profile</TableHead>
