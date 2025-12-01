@@ -85,7 +85,16 @@ export default async function PricingPage() {
         </section>
       ) : (
         <section className="grid gap-6 md:grid-cols-3">
-          {plans.map((plan) => (
+          {plans.map((plan: {
+            id: string;
+            name: string;
+            price: string;
+            cadence: string;
+            description: string;
+            features: string[];
+            cta: string;
+            highlight: boolean;
+          }) => (
             <Card
               key={plan.id}
               className={`border-border/60 bg-card/80 shadow-sm ${
