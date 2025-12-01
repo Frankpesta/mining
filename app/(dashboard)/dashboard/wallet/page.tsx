@@ -71,15 +71,15 @@ export default async function WalletPage() {
             {user?.platformBalance && (
               <>
                 {Object.entries(user.platformBalance)
-                  .filter(([key, value]) => {
+                  .filter(([key, value]: [string, unknown]) => {
                     if (key === "others") return false;
                     return typeof value === "number" && value > 0;
                   })
-                  .map(([coin, value]) => (
+                  .map(([coin, value]: [string, unknown]) => (
                     <BalanceRow key={coin} label={coin} value={value as number} />
                   ))}
                 {user.platformBalance.others &&
-                  Object.entries(user.platformBalance.others).map(([coin, value]) => (
+                  (Object.entries(user.platformBalance.others) as [string, number][]).map(([coin, value]) => (
                     <BalanceRow key={coin} label={coin} value={value} />
                   ))}
               </>
@@ -101,15 +101,15 @@ export default async function WalletPage() {
             {user?.miningBalance && (
               <>
                 {Object.entries(user.miningBalance as Record<string, number | Record<string, number> | undefined>)
-                  .filter(([key, value]) => {
+                  .filter(([key, value]: [string, unknown]) => {
                     if (key === "others") return false;
                     return typeof value === "number" && value > 0;
                   })
-                  .map(([coin, value]) => (
+                  .map(([coin, value]: [string, unknown]) => (
                     <BalanceRow key={coin} label={coin} value={value as number} />
                   ))}
                 {user.miningBalance.others
-                  ? Object.entries(user.miningBalance.others).map(([coin, value]) => (
+                  ? (Object.entries(user.miningBalance.others) as [string, number][]).map(([coin, value]) => (
                       <BalanceRow key={coin} label={coin} value={value} />
                     ))
                   : null}

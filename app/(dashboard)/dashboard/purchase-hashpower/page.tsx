@@ -70,7 +70,7 @@ export default async function PurchaseHashPowerPage() {
                 </p>
               </div>
             ) : (
-              walletOptions.map((wallet) => (
+              walletOptions.map((wallet: { crypto: "ETH" | "USDT" | "USDC"; address: string; label?: string | undefined }) => (
                 <div key={wallet.crypto} className="rounded-md border border-border/60 p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     {wallet.crypto}
