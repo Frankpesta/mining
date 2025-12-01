@@ -88,7 +88,7 @@ export default async function AdminMiningOperationsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[1100px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>

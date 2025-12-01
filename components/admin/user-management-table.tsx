@@ -96,7 +96,7 @@ export function UserManagementTable({ initialUsers }: UserManagementTableProps) 
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
