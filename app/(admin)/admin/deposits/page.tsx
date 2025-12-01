@@ -40,7 +40,7 @@ export default async function AdminDepositsPage() {
           {pendingDeposits.length === 0 ? (
             <p className="text-sm text-muted-foreground">All caught up—no pending deposits.</p>
           ) : (
-            pendingDeposits.map((deposit) => (
+            pendingDeposits.map((deposit: Doc<"deposits"> & { userEmail: string | null }) => (
               <DepositReviewCard
                 key={deposit._id}
                 deposit={{
@@ -71,7 +71,7 @@ export default async function AdminDepositsPage() {
           {history.length === 0 ? (
             <p className="text-muted-foreground">No recent approvals yet.</p>
           ) : (
-            history.map((deposit) => (
+            history.map((deposit: Doc<"deposits"> & { userEmail: string | null }) => (
               <article key={deposit._id} className="rounded-lg border border-border/60 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>
