@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getConvexClient } from "@/lib/convex/client";
 import { api } from "@/convex/_generated/api";
 import { TicketDetail } from "@/components/admin/ticket-detail";
-import type { Id } from "@/convex/_generated/dataModel";
+import type { Id, Doc } from "@/convex/_generated/dataModel";
 
 type TicketReply = {
   _id: Id<"ticketReplies">;
@@ -58,7 +58,7 @@ export default async function AdminTicketDetailPage({
   // Properly type the ticket with user data
   const ticket: Ticket = {
     ...ticketData,
-    replies: ticketData.replies.map((reply) => {
+    replies: ticketData.replies.map((reply: Doc<"ticketReplies"> & { user?: { _id: Id<"users">; email: string; role: "user" | "admin" } | null }) => {
       const userData = reply.user as unknown as {
         _id: Id<"users">;
         email: string;

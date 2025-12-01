@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import {
   Card,
   CardContent,
@@ -25,11 +26,11 @@ export default async function AdminReferralsPage() {
   ]);
 
   const totalReferrals = allReferrals.length;
-  const awardedReferrals = allReferrals.filter((r) => r.status === "awarded").length;
-  const pendingReferrals = allReferrals.filter((r) => r.status === "pending").length;
+  const awardedReferrals = allReferrals.filter((r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => r.status === "awarded").length;
+  const pendingReferrals = allReferrals.filter((r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => r.status === "pending").length;
   const totalBonusPaid = allReferrals
-    .filter((r) => r.status === "awarded")
-    .reduce((sum, r) => sum + r.bonusAmount, 0);
+    .filter((r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => r.status === "awarded")
+    .reduce((sum, r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => sum + r.bonusAmount, 0);
 
   return (
     <div className="space-y-6">

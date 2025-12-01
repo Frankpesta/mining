@@ -47,7 +47,25 @@ export default async function AdminTicketsPage({
   });
 
   // Properly type the tickets with user data
-  const tickets: Ticket[] = ticketsData.map((ticket) => {
+  const tickets: Ticket[] = ticketsData.map((ticket: {
+    _id: Id<"tickets">;
+    userId?: Id<"users">;
+    email: string;
+    name: string;
+    subject: string;
+    message: string;
+    company?: string;
+    status: "open" | "in_progress" | "resolved" | "closed";
+    priority: "low" | "medium" | "high";
+    assignedTo?: Id<"users">;
+    createdAt: number;
+    updatedAt: number;
+    resolvedAt?: number;
+    user?: {
+      _id: Id<"users">;
+      email: string;
+    } | null;
+  }) => {
     const userData = ticket.user as unknown as {
       _id: Id<"users">;
       email: string;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency } from "@/lib/utils";
 
@@ -39,7 +40,7 @@ export default async function PricingPage() {
   const backendPlans = await convex.query(api.plans.listPlans, { activeOnly: true });
 
   // Transform backend plans to match the pricing page format
-  const plans = backendPlans.map((plan, index) => {
+  const plans = backendPlans.map((plan: Doc<"plans">, index: number) => {
     const hashRateDisplay = formatHashRate(plan.hashRate, plan.hashRateUnit);
     const supportedCoinsDisplay = plan.supportedCoins.join(", ");
     
