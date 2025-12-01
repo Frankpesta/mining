@@ -30,7 +30,7 @@ export default async function AdminReferralsPage() {
   const pendingReferrals = allReferrals.filter((r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => r.status === "pending").length;
   const totalBonusPaid = allReferrals
     .filter((r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => r.status === "awarded")
-    .reduce((sum, r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => sum + r.bonusAmount, 0);
+    .reduce((sum: number, r: Doc<"referrals"> & { referrerEmail: string | null; referredUserEmail: string | null }) => sum + r.bonusAmount, 0);
 
   return (
     <div className="space-y-6">
