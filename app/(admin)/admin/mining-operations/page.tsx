@@ -42,7 +42,7 @@ export default async function AdminMiningOperationsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Mining operations</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Mining operations</h1>
         <p className="text-sm text-muted-foreground">
           Inspect every active contract across the platform, pause problematic plans, and resume
           once issues resolve.
@@ -87,50 +87,102 @@ export default async function AdminMiningOperationsPage() {
               No mining operations found.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table className="min-w-[1100px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User</TableHead>
-                    <TableHead>Coin</TableHead>
-                    <TableHead>Hash Rate</TableHead>
-                    <TableHead>Total Mined</TableHead>
-                    <TableHead>Daily Rate</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Started</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {operations.map((op) => (
-                    <TableRow key={op._id}>
-                      <TableCell className="font-medium">{op.userId}</TableCell>
-                      <TableCell>{op.coin}</TableCell>
-                      <TableCell>{formatHashrate(op.hashRate, op.hashRateUnit)}</TableCell>
-                      <TableCell>{op.totalMined.toFixed(6)}</TableCell>
-                      <TableCell>${op.currentRate.toFixed(2)}/day</TableCell>
-                      <TableCell>
-                        <StatusBadge
-                          status={
-                            op.status === "active"
-                              ? "active"
-                              : op.status === "completed"
-                                ? "approved"
-                                : "pending"
-                          }
-                        />
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(op.createdAt)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <MiningOperationActions operation={op} />
-                      </TableCell>
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden overflow-x-auto md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Coin</TableHead>
+                      <TableHead>Hash Rate</TableHead>
+                      <TableHead>Total Mined</TableHead>
+                      <TableHead>Daily Rate</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Started</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {operations.map((op) => (
+                      <TableRow key={op._id}>
+                        <TableCell className="font-medium">{op.userId}</TableCell>
+                        <TableCell>{op.coin}</TableCell>
+                        <TableCell>{formatHashrate(op.hashRate, op.hashRateUnit)}</TableCell>
+                        <TableCell>{op.totalMined.toFixed(6)}</TableCell>
+                        <TableCell>${op.currentRate.toFixed(2)}/day</TableCell>
+                        <TableCell>
+                          <StatusBadge
+                            status={
+                              op.status === "active"
+                                ? "active"
+                                : op.status === "completed"
+                                  ? "approved"
+                                  : "pending"
+                            }
+                          />
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(op.createdAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <MiningOperationActions operation={op} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Card View */}
+              <div className="flex flex-col gap-4 md:hidden">
+                {operations.map((op) => (
+                  <div
+                    key={op._id}
+                    className="rounded-lg border border-border/60 bg-card p-4 space-y-3"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-semibold text-foreground">{op.coin}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          User: {op.userId}
+                        </p>
+                      </div>
+                      <StatusBadge
+                        status={
+                          op.status === "active"
+                            ? "active"
+                            : op.status === "completed"
+                              ? "approved"
+                              : "pending"
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Hash Rate</span>
+                        <span className="font-medium">{formatHashrate(op.hashRate, op.hashRateUnit)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Total Mined</span>
+                        <span className="font-medium">{op.totalMined.toFixed(6)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Daily Rate</span>
+                        <span className="font-medium">${op.currentRate.toFixed(2)}/day</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Started</span>
+                        <span className="font-medium text-xs">{formatDate(op.createdAt)}</span>
+                      </div>
+                    </div>
+                    <div className="pt-2 border-t border-border/60">
+                      <MiningOperationActions operation={op} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -63,7 +63,7 @@ export default async function DashboardOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
           Welcome back, {user.email} 👋
         </h1>
         <p className="text-sm text-muted-foreground">

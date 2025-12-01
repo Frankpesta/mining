@@ -50,7 +50,7 @@ export default async function AdminOverviewPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Admin overview</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl lg:text-3xl">Admin overview</h1>
         <p className="text-sm text-muted-foreground">
           Monitor platform health, review pending approvals, and keep operations running smoothly.
         </p>

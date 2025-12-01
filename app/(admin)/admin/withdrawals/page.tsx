@@ -40,7 +40,7 @@ export default async function AdminWithdrawalsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Withdrawal queue</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Withdrawal queue</h1>
         <p className="text-sm text-muted-foreground">
           Approve, schedule, and record payout execution for user withdrawals.
         </p>

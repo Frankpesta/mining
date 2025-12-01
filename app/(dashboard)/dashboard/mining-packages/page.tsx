@@ -27,7 +27,7 @@ export default async function MiningPackagesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Mining Packages</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Mining Packages</h1>
         <p className="text-sm text-muted-foreground">
           Browse curated mining contracts with transparent pricing, estimated returns, and
           supported coins.
@@ -40,11 +40,11 @@ export default async function MiningPackagesPage() {
           <CardDescription>Available funds for purchasing mining packages</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline">
+            <span className="text-2xl font-bold sm:text-3xl">
               ${totalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
-            <span className="text-sm text-muted-foreground">
+            <span className="text-xs text-muted-foreground sm:text-sm">
               (ETH: {current.user.platformBalance.ETH.toFixed(4)}, USDT:{" "}
               {current.user.platformBalance.USDT.toFixed(2)}, USDC:{" "}
               {current.user.platformBalance.USDC.toFixed(2)})

@@ -23,7 +23,7 @@ export default async function AdminDepositsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Deposit approvals</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Deposit approvals</h1>
         <p className="text-sm text-muted-foreground">
           Review on-chain deposits, validate transaction hashes, and approve crediting platform
           balances.

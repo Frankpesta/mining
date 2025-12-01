@@ -17,7 +17,7 @@ export default async function ProfilePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profile Settings</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Profile Settings</h1>
         <p className="text-sm text-muted-foreground">
           Manage your profile information and profile picture.
         </p>

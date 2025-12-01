@@ -43,7 +43,7 @@ export default async function PurchaseHashPowerPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Purchase HashPower</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Purchase HashPower</h1>
         <p className="text-sm text-muted-foreground">
           Choose a supported crypto asset and follow the instructions to add funds to your platform
           balance.

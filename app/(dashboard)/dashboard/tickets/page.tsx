@@ -18,7 +18,7 @@ export default async function UserTicketsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Support Tickets</h1>
+        <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Support Tickets</h1>
         <p className="text-sm text-muted-foreground">
           View and manage your support tickets.
         </p>

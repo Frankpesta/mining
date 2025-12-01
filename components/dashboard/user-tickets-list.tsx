@@ -67,15 +67,15 @@ export function UserTicketsList({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle>My Tickets</CardTitle>
             <CardDescription>
               {tickets.length} ticket{tickets.length !== 1 ? "s" : ""}
             </CardDescription>
           </div>
-          <Link href="/dashboard/tickets/new">
-            <Button>
+          <Link href="/dashboard/tickets/new" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               New Ticket
             </Button>
@@ -83,57 +83,97 @@ export function UserTicketsList({
         </div>
       </CardHeader>
       <CardContent>
-        <div className="rounded-md border">
-          <Table className="min-w-[720px]">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Subject</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tickets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    No tickets yet. Create your first ticket to get support.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                tickets.map((ticket) => (
-                  <TableRow key={ticket._id}>
-                    <TableCell className="font-medium">{ticket.subject}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(ticket.status)}>
-                        {ticket.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={ticket.priority === "high" ? "destructive" : "default"}
-                      >
-                        {ticket.priority}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDate(ticket.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Link href={`/dashboard/tickets/${ticket._id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="mr-2 h-4 w-4" />
-                          View
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {tickets.length === 0 ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            No tickets yet. Create your first ticket to get support.
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {tickets.map((ticket) => (
+                      <TableRow key={ticket._id}>
+                        <TableCell className="font-medium">{ticket.subject}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                            {ticket.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={ticket.priority === "high" ? "destructive" : "default"}
+                          >
+                            {ticket.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDate(ticket.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Link href={`/dashboard/tickets/${ticket._id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </Button>
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="flex flex-col gap-4 md:hidden">
+              {tickets.map((ticket) => (
+                <div
+                  key={ticket._id}
+                  className="rounded-lg border border-border/60 bg-card p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-foreground">{ticket.subject}</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Created {formatDate(ticket.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant={getStatusBadgeVariant(ticket.status)}>
+                      {ticket.status}
+                    </Badge>
+                    <Badge
+                      variant={ticket.priority === "high" ? "destructive" : "default"}
+                    >
+                      {ticket.priority}
+                    </Badge>
+                  </div>
+                  <div className="pt-2 border-t border-border/60">
+                    <Link href={`/dashboard/tickets/${ticket._id}`}>
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Ticket
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
