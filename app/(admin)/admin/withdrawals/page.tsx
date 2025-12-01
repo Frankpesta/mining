@@ -24,7 +24,7 @@ export default async function AdminWithdrawalsPage() {
 
   // Create a map of crypto to hot wallet address
   const hotWalletMap = new Map(
-    hotWallets.map((wallet) => [wallet.crypto, wallet.address]),
+    hotWallets.map((wallet: Doc<"hotWallets">) => [wallet.crypto, wallet.address]),
   );
 
   const actionable = [...pendingWithdrawals, ...approvedWithdrawals].sort(
