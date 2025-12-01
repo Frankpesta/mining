@@ -172,3 +172,5 @@ npx convex run crons:processMiningOperationsAction
 4. Monitor cron: Check logs after first daily run
 5. Verify payouts: Confirm profits are being distributed correctly
 
+
+
