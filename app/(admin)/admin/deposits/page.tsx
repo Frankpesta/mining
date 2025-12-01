@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { DepositReviewCard } from "@/components/admin/deposit-review-card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
@@ -18,7 +19,7 @@ export default async function AdminDepositsPage() {
     convex.query(api.deposits.listAdminDeposits, { limit: 30 }),
   ]);
 
-  const history = recentDeposits.filter((deposit) => deposit.status !== "pending").slice(0, 20);
+  const history = recentDeposits.filter((deposit: Doc<"deposits"> & { userEmail: string | null }) => deposit.status !== "pending").slice(0, 20);
 
   return (
     <div className="space-y-6">
