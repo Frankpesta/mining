@@ -1,6 +1,5 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
 
 /**
  * Get platform balance for a user
@@ -11,7 +10,7 @@ export const getPlatformBalance = query({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId });
+    const user = await ctx.db.get(args.userId);
     if (!user) {
       return null;
     }
@@ -28,7 +27,7 @@ export const getMiningBalance = query({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const user = await ctx.runQuery(api.users.getUserById, { userId: args.userId });
+    const user = await ctx.db.get(args.userId);
     if (!user) {
       return null;
     }
