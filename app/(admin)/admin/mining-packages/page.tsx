@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { PlanForm } from "@/components/admin/plan-form";
 import { Button } from "@/components/ui/button";
 import {
@@ -88,7 +89,7 @@ export default async function AdminMiningPackagesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {plans.map((plan) => (
+                  {plans.map((plan: Doc<"plans">) => (
                     <TableRow key={plan._id}>
                       <TableCell className="font-medium">{plan.name}</TableCell>
                       <TableCell>
