@@ -95,15 +95,57 @@ export const processMiningOperationsMutation = internalMutation({
                 [coin]: (user.platformBalance[coin as "USDT" | "USDC"] ?? 0) + dailyProfitUSD,
               },
             });
-          } else {
-            // For other coins, add to platform balance
-            const currentBalance = (user.platformBalance as any)[coin] ?? 0;
+          } else if (coin === "ETH") {
             await ctx.db.patch(operation.userId, {
               platformBalance: {
                 ...user.platformBalance,
-                [coin]: currentBalance + dailyProfitCoin,
-              } as any,
+                ETH: (user.platformBalance.ETH ?? 0) + dailyProfitCoin,
+              },
             });
+          } else {
+            // For other coins, use the others record or optional fields
+            const supportedOptionalCoins = ["BTC", "SOL", "LTC", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"] as const;
+            const isOptionalCoin = supportedOptionalCoins.includes(coin as typeof supportedOptionalCoins[number]);
+            
+            if (isOptionalCoin) {
+              // Update optional coin field
+              const coinKey = coin as typeof supportedOptionalCoins[number];
+              const currentBalance = (user.platformBalance[coinKey] ?? 0) as number;
+              await ctx.db.patch(operation.userId, {
+                platformBalance: {
+                  ETH: user.platformBalance.ETH,
+                  USDT: user.platformBalance.USDT,
+                  USDC: user.platformBalance.USDC,
+                  BTC: user.platformBalance.BTC,
+                  SOL: user.platformBalance.SOL,
+                  LTC: user.platformBalance.LTC,
+                  BNB: user.platformBalance.BNB,
+                  ADA: user.platformBalance.ADA,
+                  XRP: user.platformBalance.XRP,
+                  DOGE: user.platformBalance.DOGE,
+                  DOT: user.platformBalance.DOT,
+                  MATIC: user.platformBalance.MATIC,
+                  AVAX: user.platformBalance.AVAX,
+                  ATOM: user.platformBalance.ATOM,
+                  LINK: user.platformBalance.LINK,
+                  UNI: user.platformBalance.UNI,
+                  others: user.platformBalance.others,
+                  [coinKey]: currentBalance + dailyProfitCoin,
+                },
+              });
+            } else {
+              // Store in others record for unsupported coins
+              const currentOthers = user.platformBalance.others ?? {};
+              await ctx.db.patch(operation.userId, {
+                platformBalance: {
+                  ...user.platformBalance,
+                  others: {
+                    ...currentOthers,
+                    [coin]: (currentOthers[coin] ?? 0) + dailyProfitCoin,
+                  },
+                },
+              });
+            }
           }
 
           // Also update mining balance for tracking purposes
@@ -116,13 +158,33 @@ export const processMiningOperationsMutation = internalMutation({
               },
             });
           } else {
-            const currentMining = (user.miningBalance as any)[coin] ?? 0;
-            await ctx.db.patch(operation.userId, {
-              miningBalance: {
+            // For other coins in mining balance, check if they're optional fields
+            const supportedMiningCoins = ["SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"] as const;
+            const isSupportedMiningCoin = supportedMiningCoins.includes(coin as typeof supportedMiningCoins[number]);
+            
+            if (isSupportedMiningCoin) {
+              const coinKey = coin as typeof supportedMiningCoins[number];
+              const currentMining = (user.miningBalance[coinKey] ?? 0) as number;
+              const updatedBalance = {
                 ...user.miningBalance,
-                [coin]: currentMining + dailyProfitCoin,
-              } as any,
-            });
+                [coinKey]: currentMining + dailyProfitCoin,
+              };
+              await ctx.db.patch(operation.userId, {
+                miningBalance: updatedBalance,
+              });
+            } else {
+              // Store in others record for unsupported mining coins
+              const currentOthers = user.miningBalance.others ?? {};
+              await ctx.db.patch(operation.userId, {
+                miningBalance: {
+                  ...user.miningBalance,
+                  others: {
+                    ...currentOthers,
+                    [coin]: (currentOthers[coin] ?? 0) + dailyProfitCoin,
+                  },
+                },
+              });
+            }
           }
 
           // Update operation: add to totalMined and set lastPayoutDate
