@@ -23,7 +23,7 @@ export default async function AdminWithdrawalsPage() {
     ]);
 
   // Create a map of crypto to hot wallet address
-  const hotWalletMap = new Map(
+  const hotWalletMap = new Map<string, string>(
     hotWallets.map((wallet: Doc<"hotWallets">) => [wallet.crypto, wallet.address]),
   );
 
