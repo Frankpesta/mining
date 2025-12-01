@@ -35,7 +35,7 @@ export default async function PurchaseHashPowerPage() {
     }),
   ]);
 
-  const walletOptions = hotWallets.map((wallet) => ({
+  const walletOptions = hotWallets.map((wallet: Doc<"hotWallets">) => ({
     crypto: wallet.crypto as "ETH" | "USDT" | "USDC",
     address: wallet.address,
     label: wallet.label,
