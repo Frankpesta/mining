@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { WithdrawForm } from "@/components/dashboard/withdraw-form";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
@@ -89,7 +90,7 @@ export default async function WithdrawPage() {
           {withdrawals.length === 0 ? (
             <p className="text-muted-foreground">No withdrawal requests yet.</p>
           ) : (
-            withdrawals.map((withdrawal) => (
+            withdrawals.map((withdrawal: Doc<"withdrawals">) => (
               <article key={withdrawal._id} className="rounded-lg border border-border/60 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

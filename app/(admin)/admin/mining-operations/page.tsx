@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { MiningOperationActions } from "@/components/admin/mining-operation-actions";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
@@ -104,7 +105,7 @@ export default async function AdminMiningOperationsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {operations.map((op) => (
+                    {operations.map((op: Doc<"miningOperations">) => (
                       <TableRow key={op._id}>
                         <TableCell className="font-medium">{op.userId}</TableCell>
                         <TableCell>{op.coin}</TableCell>
@@ -136,7 +137,7 @@ export default async function AdminMiningOperationsPage() {
 
               {/* Mobile Card View */}
               <div className="flex flex-col gap-4 md:hidden">
-                {operations.map((op) => (
+                {operations.map((op: Doc<"miningOperations">) => (
                   <div
                     key={op._id}
                     className="rounded-lg border border-border/60 bg-card p-4 space-y-3"

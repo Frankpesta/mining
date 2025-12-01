@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
   Card,
@@ -121,7 +122,7 @@ export default async function MiningPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allOps.map((op) => {
+                    {allOps.map((op: Doc<"miningOperations">) => {
                       const { progress, daysRemaining } = calculateProgress(op.startTime, op.endTime);
                       return (
                         <TableRow key={op._id}>
@@ -172,7 +173,7 @@ export default async function MiningPage() {
 
               {/* Mobile Card View */}
               <div className="flex flex-col gap-4 md:hidden">
-                {allOps.map((op) => {
+                {allOps.map((op: Doc<"miningOperations">) => {
                   const { progress, daysRemaining } = calculateProgress(op.startTime, op.endTime);
                   return (
                     <div

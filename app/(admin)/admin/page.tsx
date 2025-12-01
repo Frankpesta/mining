@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
   Card,
@@ -82,7 +83,7 @@ export default async function AdminOverviewPage() {
             {summary.recentDeposits.length === 0 ? (
               <p className="text-muted-foreground">No deposit activity yet.</p>
             ) : (
-              summary.recentDeposits.map((deposit) => (
+              summary.recentDeposits.map((deposit: Doc<"deposits"> & { userEmail: string | null }) => (
                 <article key={deposit._id} className="space-y-1 rounded-lg border border-border/60 p-3">
                   <div className="flex items-center justify-between">
                     <p className="font-semibold">
@@ -113,7 +114,7 @@ export default async function AdminOverviewPage() {
             {summary.recentWithdrawals.length === 0 ? (
               <p className="text-muted-foreground">No withdrawal activity yet.</p>
             ) : (
-              summary.recentWithdrawals.map((withdrawal) => (
+              summary.recentWithdrawals.map((withdrawal: Doc<"withdrawals"> & { userEmail: string | null }) => (
                 <article
                   key={withdrawal._id}
                   className="space-y-1 rounded-lg border border-border/60 p-3"

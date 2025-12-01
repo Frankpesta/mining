@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { DepositFormWallet } from "@/components/dashboard/deposit-form-wallet";
 import {
   Card,
@@ -111,7 +112,7 @@ export default async function PurchaseHashPowerPage() {
           {deposits.length === 0 ? (
             <p className="text-muted-foreground">No deposits submitted yet.</p>
           ) : (
-            deposits.map((deposit) => (
+            deposits.map((deposit: Doc<"deposits">) => (
               <article key={deposit._id} className="rounded-lg border border-border/60 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

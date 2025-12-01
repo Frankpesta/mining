@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { WithdrawReviewCard } from "@/components/admin/withdraw-review-card";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
@@ -31,7 +32,7 @@ export default async function AdminWithdrawalsPage() {
   );
 
   const history = recentWithdrawals.filter(
-    (withdrawal) =>
+    (withdrawal: Doc<"withdrawals"> & { userEmail: string | null }) =>
       withdrawal.status === "completed" ||
       withdrawal.status === "failed" ||
       withdrawal.status === "rejected",
@@ -55,7 +56,7 @@ export default async function AdminWithdrawalsPage() {
           {actionable.length === 0 ? (
             <p className="text-sm text-muted-foreground">No withdrawals waiting for approval.</p>
           ) : (
-            actionable.map((withdrawal) => (
+            actionable.map((withdrawal: Doc<"withdrawals"> & { userEmail: string | null }) => (
               <WithdrawReviewCard
                 key={withdrawal._id}
                 withdrawal={{
@@ -88,7 +89,7 @@ export default async function AdminWithdrawalsPage() {
           {history.length === 0 ? (
             <p className="text-muted-foreground">No completed withdrawals yet.</p>
           ) : (
-            history.map((withdrawal) => (
+            history.map((withdrawal: Doc<"withdrawals"> & { userEmail: string | null }) => (
               <article key={withdrawal._id} className="rounded-lg border border-border/60 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

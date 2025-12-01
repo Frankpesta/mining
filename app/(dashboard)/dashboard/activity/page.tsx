@@ -46,7 +46,12 @@ export default async function ActivityPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {activity.map((item) => (
+              {activity.map((item: {
+                type: "audit" | "deposit" | "withdrawal" | "mining";
+                id: string;
+                timestamp: number;
+                [key: string]: any;
+              }) => (
                 <ActivityItem key={`${item.type}-${item.id}`} item={item} />
               ))}
             </div>
