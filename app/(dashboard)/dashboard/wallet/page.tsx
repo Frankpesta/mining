@@ -7,23 +7,48 @@ import {
 } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
 import { formatCurrency } from "@/lib/utils";
-import { getConvexClient } from "@/lib/convex/client";
-import { api } from "@/convex/_generated/api";
+import { getCryptoPrices, calculateBalanceUSD } from "@/lib/crypto-prices";
 
 export default async function WalletPage() {
   const current = await getCurrentUser();
   const user = current?.user;
 
-  const convex = getConvexClient();
-  const platformBalanceUSD = user
-    ? await convex.action(api.wallet.calculatePlatformBalanceUSD, {
-        userId: user._id,
-      })
+  // Collect all coins from balances
+  const platformCoins: string[] = [];
+  const miningCoins: string[] = [];
+
+  if (user?.platformBalance) {
+    for (const [key, value] of Object.entries(user.platformBalance)) {
+      if (key !== "others" && typeof value === "number" && value > 0) {
+        platformCoins.push(key);
+      }
+      if (key === "others" && value && typeof value === "object") {
+        platformCoins.push(...Object.keys(value));
+      }
+    }
+  }
+
+  if (user?.miningBalance) {
+    for (const [key, value] of Object.entries(user.miningBalance)) {
+      if (key !== "others" && typeof value === "number" && value > 0) {
+        miningCoins.push(key);
+      }
+      if (key === "others" && value && typeof value === "object") {
+        miningCoins.push(...Object.keys(value));
+      }
+    }
+  }
+
+  // Fetch prices for all coins
+  const allCoins = [...new Set([...platformCoins, ...miningCoins])];
+  const prices = allCoins.length > 0 ? await getCryptoPrices(allCoins) : {};
+
+  // Calculate USD values
+  const platformBalanceUSD = user?.platformBalance
+    ? calculateBalanceUSD(user.platformBalance, prices)
     : 0;
-  const miningBalanceUSD = user
-    ? await convex.action(api.wallet.calculateMiningBalanceUSD, {
-        userId: user._id,
-      })
+  const miningBalanceUSD = user?.miningBalance
+    ? calculateBalanceUSD(user.miningBalance, prices)
     : 0;
 
   return (

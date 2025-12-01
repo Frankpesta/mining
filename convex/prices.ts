@@ -84,161 +84,39 @@ export const getCoinPrice = query({
 });
 
 /**
- * Get price for a single coin (action - for use in mutations)
- * This uses fetch which is only allowed in actions
- * Includes retry logic with exponential backoff for rate limiting
+ * DEPRECATED: CoinGecko API calls have been moved to frontend (/api/crypto-prices)
+ * These functions are kept for backward compatibility but will return empty/zero values.
+ * Use the frontend API route instead: GET /api/crypto-prices?coins=BTC,ETH,USDT
+ * 
+ * @deprecated Use /api/crypto-prices instead
  */
 export const getCoinPriceAction = action({
   args: {
     coin: v.string(),
   },
   handler: async (ctx, args) => {
-    const coinId = COIN_ID_MAP[args.coin.toUpperCase()];
-    if (!coinId) {
-      return 0;
-    }
-
-    let lastError: Error | null = null;
-
-    // Retry logic with exponential backoff for rate limiting
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const response = await fetch(
-          `${COINGECKO_API}/simple/price?ids=${coinId}&vs_currencies=usd`,
-          {
-            headers: {
-              Accept: "application/json",
-            },
-          },
-        );
-
-        // Handle rate limiting (429) with retry
-        if (response.status === 429) {
-          if (attempt < MAX_RETRIES) {
-            const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
-            console.warn(
-              `CoinGecko API rate limited (429) for ${args.coin}. Retrying in ${retryDelay}ms (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
-            );
-            await sleep(retryDelay);
-            continue; // Retry
-          } else {
-            console.error(
-              `CoinGecko API rate limited (429) for ${args.coin}. Max retries exceeded.`,
-            );
-            return 0;
-          }
-        }
-
-        if (!response.ok) {
-          console.error(`CoinGecko API failed: ${response.status} ${response.statusText}`);
-          return 0;
-        }
-
-        const data = await response.json();
-        return data[coinId]?.usd ?? 0;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        if (attempt < MAX_RETRIES) {
-          const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
-          console.warn(
-            `Error fetching price for ${args.coin} (attempt ${attempt + 1}/${MAX_RETRIES + 1}). Retrying in ${retryDelay}ms:`,
-            lastError.message,
-          );
-          await sleep(retryDelay);
-          continue;
-        }
-      }
-    }
-
-    // If we get here, all retries failed
-    console.error(`Error fetching price for ${args.coin} after all retries:`, lastError);
+    console.warn(
+      `[DEPRECATED] getCoinPriceAction is deprecated. Use /api/crypto-prices instead.`
+    );
     return 0;
   },
 });
 
 /**
- * Get prices for multiple coins (action - for use in mutations)
- * Includes retry logic with exponential backoff for rate limiting (429 errors)
+ * DEPRECATED: CoinGecko API calls have been moved to frontend (/api/crypto-prices)
+ * This function is kept for backward compatibility but will return empty values.
+ * Use the frontend API route instead: GET /api/crypto-prices?coins=BTC,ETH,USDT
+ * 
+ * @deprecated Use /api/crypto-prices instead
  */
 export const getCryptoPricesAction = action({
   args: {
     coins: v.array(v.string()),
   },
   handler: async (ctx, args) => {
-    const coinIds = args.coins
-      .map((coin) => COIN_ID_MAP[coin.toUpperCase()])
-      .filter(Boolean)
-      .join(",");
-
-    if (!coinIds) {
-      return {};
-    }
-
-    let lastError: Error | null = null;
-    
-    // Retry logic with exponential backoff for rate limiting
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const response = await fetch(
-          `${COINGECKO_API}/simple/price?ids=${coinIds}&vs_currencies=usd`,
-          {
-            headers: {
-              Accept: "application/json",
-            },
-          },
-        );
-
-        // Handle rate limiting (429) with retry
-        if (response.status === 429) {
-          if (attempt < MAX_RETRIES) {
-            const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
-            console.warn(
-              `CoinGecko API rate limited (429). Retrying in ${retryDelay}ms (attempt ${attempt + 1}/${MAX_RETRIES + 1})`,
-            );
-            await sleep(retryDelay);
-            continue; // Retry
-          } else {
-            console.error(
-              `CoinGecko API rate limited (429). Max retries exceeded. Consider upgrading to CoinGecko Pro API or reducing request frequency.`,
-            );
-            return {}; // Return empty after max retries
-          }
-        }
-
-        if (!response.ok) {
-          console.error(`CoinGecko API failed: ${response.status} ${response.statusText}`);
-          return {};
-        }
-
-        const data = await response.json();
-        const prices: Record<string, number> = {};
-
-        // Map CoinGecko IDs back to coin symbols (only for requested coins)
-        for (const coin of args.coins) {
-          const coinUpper = coin.toUpperCase();
-          const coinId = COIN_ID_MAP[coinUpper];
-          if (coinId && data[coinId]?.usd) {
-            prices[coinUpper] = data[coinId].usd;
-          }
-        }
-
-        return prices;
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        if (attempt < MAX_RETRIES) {
-          const retryDelay = INITIAL_RETRY_DELAY * Math.pow(2, attempt);
-          console.warn(
-            `Error fetching crypto prices (attempt ${attempt + 1}/${MAX_RETRIES + 1}). Retrying in ${retryDelay}ms:`,
-            lastError.message,
-          );
-          await sleep(retryDelay);
-          continue;
-        }
-      }
-    }
-
-    // If we get here, all retries failed
-    console.error("Error fetching crypto prices after all retries:", lastError);
+    console.warn(
+      `[DEPRECATED] getCryptoPricesAction is deprecated. Use /api/crypto-prices instead.`
+    );
     return {};
   },
 });

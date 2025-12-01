@@ -211,35 +211,23 @@ export const processMiningOperationsMutation = internalMutation({
 
 /**
  * Internal action to process mining operations
- * This fetches prices and then calls the mutation
+ * Note: Price fetching has been moved to frontend to avoid CoinGecko rate limiting.
+ * This action now processes operations without prices - operations without valid prices will be skipped.
+ * Prices should be fetched on the frontend and passed if needed, or operations will use default/fallback pricing.
  */
 export const processMiningOperationsAction = internalAction({
   args: {},
   handler: async (ctx) => {
-    // Fetch prices for all supported coins (we'll filter in the mutation)
-    // This is more efficient than fetching per-operation
-    const supportedCoins = ["BTC", "ETH", "SOL", "LTC", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI", "USDT", "USDC"];
+    // CoinGecko API calls have been moved to frontend (/api/crypto-prices)
+    // For cron jobs, we'll process operations without prices
+    // Operations that require prices will be skipped if prices aren't available
+    // This is acceptable since mining operations can continue without real-time price updates
     
-    // Add a small delay to help avoid rate limiting if multiple cron jobs run simultaneously
-    // CoinGecko free tier allows ~10-50 calls/minute
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    console.log(`[processMiningOperations] Processing operations without prices (prices now fetched on frontend)`);
     
-    // Fetch prices for all coins
-    const prices = await ctx.runAction(api.prices.getCryptoPricesAction, {
-      coins: supportedCoins,
-    });
-    
-    // Log if we got prices successfully
-    const priceCount = Object.keys(prices).length;
-    if (priceCount > 0) {
-      console.log(`[processMiningOperations] Successfully fetched ${priceCount} coin prices`);
-    } else {
-      console.warn(`[processMiningOperations] No prices fetched - may be rate limited or API error`);
-    }
-    
-    // Call the mutation with prices
+    // Call the mutation with empty prices - it will handle missing prices gracefully
     await ctx.runMutation(internal.crons.processMiningOperationsMutation, {
-      prices,
+      prices: {},
     });
   },
 });
