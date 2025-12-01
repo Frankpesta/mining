@@ -140,7 +140,7 @@ export default async function DashboardOverviewPage() {
               </span>
             </div>
             {summary.balances.mining.others
-              ? Object.entries(summary.balances.mining.others).map(([coin, amount]: [string, number]) => (
+              ? (Object.entries(summary.balances.mining.others) as [string, number][]).map(([coin, amount]) => (
                   <div key={coin} className="flex items-center justify-between">
                     <span className="font-medium uppercase">{coin}</span>
                     <span className="tabular-nums">{amount.toLocaleString()}</span>
