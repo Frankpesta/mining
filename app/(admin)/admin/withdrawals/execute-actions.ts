@@ -2,6 +2,7 @@
 
 import { executeWithdrawal } from "@/lib/blockchain/withdrawal-executor";
 import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { getConvexClient } from "@/lib/convex/client";
 import { getCurrentUser } from "@/lib/auth/session";
 import { revalidatePath } from "next/cache";
@@ -30,7 +31,7 @@ export async function executeWithdrawalTx(
     const withdrawal = await convex.query(api.withdrawals.listAdminWithdrawals, {
       limit: 1000,
     });
-    const targetWithdrawal = withdrawal.find((w) => w._id === withdrawalId);
+    const targetWithdrawal = withdrawal.find((w: Doc<"withdrawals"> & { userEmail: string | null }) => w._id === withdrawalId);
 
     if (!targetWithdrawal) {
       return {
