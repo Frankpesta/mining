@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 
 export const listPlans = query({
@@ -15,6 +15,17 @@ export const listPlans = query({
           .collect()
       : await ctx.db.query("plans").collect();
 
+    return plans.sort((a, b) => a.order - b.order);
+  },
+});
+
+/**
+ * Internal query to list all plans (for internal use)
+ */
+export const listAllPlansInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const plans = await ctx.db.query("plans").collect();
     return plans.sort((a, b) => a.order - b.order);
   },
 });
@@ -162,6 +173,11 @@ export const purchasePlan = mutation({
       throw new ConvexError("Plan is not active");
     }
 
+    // Only BTC and ETH can be mined
+    if (args.coin !== "BTC" && args.coin !== "ETH") {
+      throw new ConvexError(`Only BTC and ETH can be mined. Received: ${args.coin}`);
+    }
+    
     if (!plan.supportedCoins.includes(args.coin)) {
       throw new ConvexError(`Coin ${args.coin} is not supported by this plan`);
     }

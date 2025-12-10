@@ -4,18 +4,50 @@ import { mutation, query } from "./_generated/server";
 import type { Id, Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
-type Crypto = "ETH" | "USDT" | "USDC";
+type SupportedCrypto = 
+  | "BTC"
+  | "ETH"
+  | "SOL"
+  | "LTC"
+  | "BNB"
+  | "ADA"
+  | "XRP"
+  | "DOGE"
+  | "DOT"
+  | "MATIC"
+  | "AVAX"
+  | "ATOM"
+  | "LINK"
+  | "UNI"
+  | "USDT"
+  | "USDC";
 
-const WITHDRAWAL_FEES: Record<Crypto, number> = {
+const WITHDRAWAL_FEES: Record<string, number> = {
+  BTC: 0.0001,
   ETH: 0.001,
+  SOL: 0.01,
+  LTC: 0.001,
+  BNB: 0.001,
+  ADA: 1,
+  XRP: 0.1,
+  DOGE: 1,
+  DOT: 0.1,
+  MATIC: 0.1,
+  AVAX: 0.01,
+  ATOM: 0.01,
+  LINK: 0.1,
+  UNI: 0.1,
   USDT: 10,
   USDC: 10,
 };
 
-const calculateNetworkFee = (crypto: Crypto, amount: number) => {
-  const baseFee = WITHDRAWAL_FEES[crypto];
+const calculateNetworkFee = (crypto: string, amount: number) => {
+  const baseFee = WITHDRAWAL_FEES[crypto] ?? 0.001;
   if (crypto === "ETH") {
     return Math.max(baseFee, amount * 0.0025);
+  }
+  if (crypto === "BTC") {
+    return Math.max(baseFee, amount * 0.0001);
   }
   return baseFee;
 };
@@ -23,7 +55,24 @@ const calculateNetworkFee = (crypto: Crypto, amount: number) => {
 export const createWithdrawalRequest = mutation({
   args: {
     userId: v.id("users"),
-    crypto: v.union(v.literal("ETH"), v.literal("USDT"), v.literal("USDC")),
+    crypto: v.union(
+      v.literal("BTC"),
+      v.literal("ETH"),
+      v.literal("SOL"),
+      v.literal("LTC"),
+      v.literal("BNB"),
+      v.literal("ADA"),
+      v.literal("XRP"),
+      v.literal("DOGE"),
+      v.literal("DOT"),
+      v.literal("MATIC"),
+      v.literal("AVAX"),
+      v.literal("ATOM"),
+      v.literal("LINK"),
+      v.literal("UNI"),
+      v.literal("USDT"),
+      v.literal("USDC"),
+    ),
     amount: v.number(),
     destinationAddress: v.string(),
     requestedFee: v.optional(v.number()),
@@ -39,24 +88,54 @@ export const createWithdrawalRequest = mutation({
       throw new ConvexError("User not found");
     }
 
-    const currentBalance = user.platformBalance[args.crypto as Crypto];
+    // Get current balance - handle both required and optional fields
+    let currentBalance = 0;
+    if (args.crypto === "ETH" || args.crypto === "USDT" || args.crypto === "USDC") {
+      currentBalance = user.platformBalance[args.crypto] ?? 0;
+    } else if (args.crypto === "BTC") {
+      currentBalance = user.platformBalance.BTC ?? 0;
+    } else {
+      // For optional coins, check if they exist in platformBalance
+      const optionalCoin = args.crypto as "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
+      currentBalance = (user.platformBalance[optionalCoin] as number | undefined) ?? 0;
+    }
+    
     if (currentBalance < args.amount) {
       throw new ConvexError("Insufficient platform balance");
     }
 
-    const networkFee = args.requestedFee ?? calculateNetworkFee(args.crypto as Crypto, args.amount);
+    const networkFee = args.requestedFee ?? calculateNetworkFee(args.crypto, args.amount);
     if (networkFee >= args.amount) {
       throw new ConvexError("Amount must exceed the network fee");
     }
 
     const finalAmount = args.amount - networkFee;
 
-    await ctx.db.patch(user._id, {
-      platformBalance: {
-        ...user.platformBalance,
-        [args.crypto]: currentBalance - args.amount,
-      },
-    });
+    // Update balance based on crypto type
+    if (args.crypto === "ETH" || args.crypto === "USDT" || args.crypto === "USDC") {
+      await ctx.db.patch(user._id, {
+        platformBalance: {
+          ...user.platformBalance,
+          [args.crypto]: currentBalance - args.amount,
+        },
+      });
+    } else if (args.crypto === "BTC") {
+      await ctx.db.patch(user._id, {
+        platformBalance: {
+          ...user.platformBalance,
+          BTC: currentBalance - args.amount,
+        },
+      });
+    } else {
+      // Handle optional coins
+      const optionalCoin = args.crypto as "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
+      await ctx.db.patch(user._id, {
+        platformBalance: {
+          ...user.platformBalance,
+          [optionalCoin]: currentBalance - args.amount,
+        },
+      });
+    }
 
     const withdrawalId = await ctx.db.insert("withdrawals", {
       userId: args.userId,

@@ -43,7 +43,7 @@ export async function reviewDeposit(input: ReviewDepositInput) {
   const convex = getConvexClient();
 
   try {
-    await convex.mutation(api.deposits.updateDepositStatus, {
+    await convex.action(api.deposits.updateDepositStatus, {
       depositId: parsed.data.depositId as Id<"deposits">,
       adminId: current.user._id,
       status: parsed.data.status,

@@ -70,6 +70,7 @@ export default async function HomePage() {
   return (
     <div className="relative overflow-hidden">
       <HeroSection />
+      <VideoSection />
       <div className="bg-[radial-gradient(circle_at_top,_rgba(37,99,235,0.12),_transparent_60%)]">
         <section className="mx-auto flex w-full max-w-6xl flex-col gap-14 px-4 pb-16 pt-8 sm:px-6 lg:px-8">
           <MetricsStrip />
@@ -328,6 +329,42 @@ function CTASection() {
           <Button size="lg" variant="outline" asChild>
             <Link href="/pricing">Compare plans</Link>
           </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function VideoSection() {
+  return (
+    <section className="relative bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-20">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="space-y-8 text-center">
+          <div className="space-y-4">
+            <p className="text-xs uppercase tracking-[0.4em] text-blue-200/70">
+              Platform Overview
+            </p>
+            <h2 className="text-balance text-3xl font-semibold tracking-tight text-slate-50 sm:text-4xl">
+              See how blockhashpro works
+            </h2>
+            <p className="mx-auto max-w-2xl text-pretty text-base text-blue-100/80">
+              Watch this quick video to understand how our mining platform helps you earn crypto
+              without the complexity of hardware setup or maintenance.
+            </p>
+          </div>
+          <div className="relative mx-auto aspect-video w-full max-w-5xl overflow-hidden rounded-2xl border border-blue-400/30 bg-slate-900/60 shadow-2xl backdrop-blur">
+            <video
+              className="h-full w-full object-cover"
+              controls
+              autoPlay={false}
+              playsInline
+              preload="metadata"
+              poster=""
+            >
+              <source src="/IMG_4037.MP4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
         </div>
       </div>
     </section>
