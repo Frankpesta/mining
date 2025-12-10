@@ -16,7 +16,7 @@ type AdminDeposit = {
   _id: string;
   userEmail: string | null;
   amount: number;
-  crypto: "ETH" | "USDT" | "USDC";
+  crypto: "ETH" | "BTC" | "USDT" | "USDC";
   status: "pending" | "approved" | "rejected";
   createdAt: number;
   walletAddress: string;
@@ -130,7 +130,7 @@ export function DepositReviewCard({ deposit }: { deposit: AdminDeposit }) {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <label className="text-sm font-semibold text-foreground">Transaction hash</label>
-          {txHash && isActionable ? (
+          {txHash && isActionable && (deposit.crypto === "ETH" || deposit.crypto === "USDT" || deposit.crypto === "USDC") ? (
             <Button
               type="button"
               size="sm"
@@ -140,6 +140,8 @@ export function DepositReviewCard({ deposit }: { deposit: AdminDeposit }) {
             >
               {isVerifying ? "Verifying..." : "Verify on-chain"}
             </Button>
+          ) : deposit.crypto === "BTC" && isActionable ? (
+            <span className="text-xs text-muted-foreground">BTC verification not available</span>
           ) : null}
         </div>
         <Input
@@ -148,7 +150,7 @@ export function DepositReviewCard({ deposit }: { deposit: AdminDeposit }) {
             setTxHash(event.target.value);
             setVerificationResult(null);
           }}
-          placeholder="0x..."
+          placeholder={deposit.crypto === "BTC" ? "BTC transaction hash" : deposit.crypto === "ETH" || deposit.crypto === "USDT" || deposit.crypto === "USDC" ? "0x..." : "Transaction hash"}
           spellCheck={false}
           disabled={!isActionable}
         />

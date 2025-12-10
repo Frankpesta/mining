@@ -47,12 +47,20 @@ export async function executeWithdrawalTx(
       };
     }
 
+    // Only ETH, USDT, and USDC can be executed via this function
+    if (targetWithdrawal.crypto !== "ETH" && targetWithdrawal.crypto !== "USDT" && targetWithdrawal.crypto !== "USDC") {
+      return {
+        success: false,
+        error: `Automatic execution for ${targetWithdrawal.crypto} is not yet supported. Please execute manually.`,
+      };
+    }
+
     // Execute the transaction
     const result = await executeWithdrawal(
       hotWalletAddress,
       targetWithdrawal.destinationAddress,
       targetWithdrawal.finalAmount,
-      targetWithdrawal.crypto,
+      targetWithdrawal.crypto as "ETH" | "USDT" | "USDC",
     );
 
     if (!result.success || !result.txHash) {

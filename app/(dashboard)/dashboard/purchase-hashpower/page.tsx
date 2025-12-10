@@ -13,10 +13,9 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatDate } from "@/lib/utils";
 
-const CRYPTO_LABELS: Record<"ETH" | "USDT" | "USDC", string> = {
-  ETH: "Ethereum (ERC-20)",
-  USDT: "Tether (ERC-20)",
-  USDC: "USD Coin (ERC-20)",
+const CRYPTO_LABELS: Record<"ETH" | "BTC", string> = {
+  ETH: "Ethereum",
+  BTC: "Bitcoin",
 };
 
 export default async function PurchaseHashPowerPage() {
@@ -35,11 +34,13 @@ export default async function PurchaseHashPowerPage() {
     }),
   ]);
 
-  const walletOptions = hotWallets.map((wallet: Doc<"hotWallets">) => ({
-    crypto: wallet.crypto as "ETH" | "USDT" | "USDC",
-    address: wallet.address,
-    label: wallet.label,
-  }));
+  const walletOptions = hotWallets
+    .filter((wallet: Doc<"hotWallets">) => wallet.crypto === "ETH" || wallet.crypto === "BTC")
+    .map((wallet: Doc<"hotWallets">) => ({
+      crypto: wallet.crypto as "ETH" | "BTC",
+      address: wallet.address,
+      label: wallet.label,
+    }));
 
   return (
     <div className="space-y-6">
@@ -70,7 +71,7 @@ export default async function PurchaseHashPowerPage() {
                 </p>
               </div>
             ) : (
-              walletOptions.map((wallet: { crypto: "ETH" | "USDT" | "USDC"; address: string; label?: string | undefined }) => (
+              walletOptions.map((wallet: { crypto: "ETH" | "BTC"; address: string; label?: string | undefined }) => (
                 <div key={wallet.crypto} className="rounded-md border border-border/60 p-4">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     {wallet.crypto}

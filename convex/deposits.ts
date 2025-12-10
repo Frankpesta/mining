@@ -5,12 +5,12 @@ import { internal } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 
-type Crypto = "ETH" | "BTC";
+type Crypto = "ETH" | "BTC" | "USDT" | "USDC";
 
 export const createDepositRequest = mutation({
   args: {
     userId: v.id("users"),
-    crypto: v.union(v.literal("ETH"), v.literal("BTC")),
+    crypto: v.union(v.literal("ETH"), v.literal("BTC"), v.literal("USDT"), v.literal("USDC")),
     amount: v.number(),
     txHash: v.optional(v.string()),
   },
@@ -122,6 +122,22 @@ export const updateDepositStatusInternal = internalMutation({
             ETH: user.platformBalance.ETH + (deposit.amount ?? 0),
           },
         });
+      } else if (deposit.crypto === "USDT") {
+        // Handle USDT deposit
+        await ctx.db.patch(user._id, {
+          platformBalance: {
+            ...user.platformBalance,
+            USDT: user.platformBalance.USDT + (deposit.amount ?? 0),
+          },
+        });
+      } else if (deposit.crypto === "USDC") {
+        // Handle USDC deposit
+        await ctx.db.patch(user._id, {
+          platformBalance: {
+            ...user.platformBalance,
+            USDC: user.platformBalance.USDC + (deposit.amount ?? 0),
+          },
+        });
       }
     }
 
@@ -226,7 +242,7 @@ export const startMiningFromDeposit = internalAction({
   args: {
     depositId: v.id("deposits"),
     userId: v.id("users"),
-    crypto: v.union(v.literal("ETH"), v.literal("BTC")),
+    crypto: v.union(v.literal("ETH"), v.literal("BTC"), v.literal("USDT"), v.literal("USDC")),
     amount: v.number(),
   },
   handler: async (ctx, args) => {
@@ -285,8 +301,11 @@ export const startMiningFromDeposit = internalAction({
         console.warn("Error fetching BTC price, using fallback price of $60000:", error);
         depositAmountUSD = args.amount * 60000;
       }
+    } else if (args.crypto === "USDT" || args.crypto === "USDC") {
+      // For stablecoins (USDT, USDC), use 1:1 conversion to USD
+      depositAmountUSD = args.amount;
     } else {
-      throw new ConvexError(`Unsupported deposit crypto: ${args.crypto}`);
+      throw new ConvexError(`Unsupported deposit crypto: ${String(args.crypto)}`);
     }
 
     // Find matching plan based on deposit amount
@@ -334,7 +353,8 @@ export const startMiningFromDeposit = internalAction({
       // Only mine BTC or ETH
       miningCoin = args.crypto;
     } else {
-      // Default to BTC if deposit crypto is not BTC or ETH (shouldn't happen, but safety check)
+      // For USDT/USDC deposits, default to BTC for mining
+      // (USDT/USDC are stablecoins, so they don't need to be mined themselves)
       miningCoin = "BTC";
     }
     
@@ -387,21 +407,7 @@ export const startMiningFromDeposit = internalAction({
       purchaseAmount = totalBalanceUSD;
     }
     
-    // Fetch prices to calculate crypto amounts to deduct
-    let btcPriceUSD = 60000;
-    let ethPriceUSD = 3000;
-    try {
-      const priceResponse = await fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd"
-      );
-      if (priceResponse.ok) {
-        const priceData = await priceResponse.json();
-        btcPriceUSD = priceData.bitcoin?.usd ?? 60000;
-        ethPriceUSD = priceData.ethereum?.usd ?? 3000;
-      }
-    } catch (error) {
-      console.warn("Failed to fetch prices for deduction calculation, using fallback prices");
-    }
+    // Use the prices already fetched above for deduction calculation
     
     // Calculate how much BTC/ETH to deduct (in crypto units)
     const btcToDeduct = purchaseAmount / btcPriceUSD;

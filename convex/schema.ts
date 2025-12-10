@@ -81,7 +81,7 @@ export default defineSchema({
 
   deposits: defineTable({
     userId: v.id("users"),
-    crypto: v.union(v.literal("ETH"), v.literal("BTC")),
+    crypto: v.union(v.literal("ETH"), v.literal("BTC"), v.literal("USDT"), v.literal("USDC")),
     amount: v.number(),
     txHash: v.optional(v.string()),
     walletAddress: v.string(),

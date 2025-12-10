@@ -23,7 +23,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 
-type Crypto = "ETH" | "USDT" | "USDC";
+type Crypto = "ETH" | "BTC";
 
 type WalletOption = {
   crypto: Crypto;
@@ -38,8 +38,7 @@ type DepositFormProps = {
 
 const DEFAULT_MINIMUMS: Record<Crypto, number> = {
   ETH: 0.01,
-  USDT: 25,
-  USDC: 25,
+  BTC: 0.0001,
 };
 
 export function DepositForm({ wallets, minimums }: DepositFormProps) {
@@ -50,7 +49,7 @@ export function DepositForm({ wallets, minimums }: DepositFormProps) {
     return accumulator;
   }, {} as Record<Crypto, WalletOption>);
 
-  const defaultCrypto: Crypto = wallets[0]?.crypto ?? "USDT";
+  const defaultCrypto: Crypto = wallets[0]?.crypto ?? "ETH";
   const isDisabled = wallets.length === 0;
 
   const form = useForm<DepositRequestInput>({

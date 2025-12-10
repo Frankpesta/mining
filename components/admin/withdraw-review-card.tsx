@@ -18,7 +18,7 @@ type AdminWithdrawal = {
   amount: number;
   finalAmount: number;
   networkFee: number;
-  crypto: "ETH" | "USDT" | "USDC";
+  crypto: "ETH" | "USDT" | "USDC" | "BTC" | "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
   status: "pending" | "approved" | "completed" | "rejected" | "failed";
   createdAt: number;
   destinationAddress: string;

@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { prepareDepositTransaction, type SupportedCrypto } from "@/lib/wallet/deposit";
 
-type Crypto = "ETH" | "USDT" | "USDC";
+type Crypto = "ETH" | "BTC";
 
 type WalletOption = {
   crypto: Crypto;
@@ -42,8 +42,7 @@ type DepositFormWalletProps = {
 
 const DEFAULT_MINIMUMS: Record<Crypto, number> = {
   ETH: 0.01,
-  USDT: 25,
-  USDC: 25,
+  BTC: 0.0001,
 };
 
 export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps) {
@@ -64,7 +63,7 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
     return accumulator;
   }, {} as Record<Crypto, WalletOption>);
 
-  const defaultCrypto: Crypto = wallets[0]?.crypto ?? "USDT";
+  const defaultCrypto: Crypto = wallets[0]?.crypto ?? "ETH";
   const isDisabled = wallets.length === 0;
 
   const form = useForm<DepositRequestInput>({
@@ -142,36 +141,13 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
         } else {
           throw new Error("Invalid transaction format for ETH");
         }
+      } else if (values.crypto === "BTC") {
+        // BTC cannot be sent via wagmi (different blockchain)
+        // User needs to send BTC manually and provide txHash
+        toast.info("Please send BTC manually to the address shown above, then provide the transaction hash below.");
+        return;
       } else {
-        const tokenAddress = values.crypto === "USDT" 
-          ? "0xdAC17F958D2ee523a2206206994597C13D831ec7"
-          : "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
-        const decimals = 6;
-        const amountInSmallestUnit = parseUnits(values.amount.toString(), decimals);
-        const { normalizeAddress } = await import("@/lib/blockchain/viem");
-        const normalizedTo = normalizeAddress(selectedWallet.address);
-        
-        if (!normalizedTo) {
-          throw new Error("Invalid recipient address");
-        }
-
-        writeContract({
-          address: tokenAddress as `0x${string}`,
-          abi: [
-            {
-              constant: false,
-              inputs: [
-                { name: "_to", type: "address" },
-                { name: "_value", type: "uint256" },
-              ],
-              name: "transfer",
-              outputs: [{ name: "", type: "bool" }],
-              type: "function",
-            },
-          ],
-          functionName: "transfer",
-          args: [normalizedTo, amountInSmallestUnit],
-        });
+        throw new Error(`Unsupported crypto: ${values.crypto}`);
       }
 
       toast.success("Transaction sent! Waiting for confirmation...");
