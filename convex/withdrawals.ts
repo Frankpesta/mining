@@ -262,12 +262,32 @@ export const updateWithdrawalStatus = mutation({
     }
 
     if (args.status === "rejected" || args.status === "failed") {
-      const updatedBalance = {
-        ...user.platformBalance,
-        [withdrawal.crypto]:
-          user.platformBalance[withdrawal.crypto as Crypto] + withdrawal.amount,
-      };
-      await ctx.db.patch(user._id, { platformBalance: updatedBalance });
+      // Refund the withdrawal amount back to user's platform balance
+      if (withdrawal.crypto === "ETH" || withdrawal.crypto === "USDT" || withdrawal.crypto === "USDC") {
+        await ctx.db.patch(user._id, {
+          platformBalance: {
+            ...user.platformBalance,
+            [withdrawal.crypto]: user.platformBalance[withdrawal.crypto] + withdrawal.amount,
+          },
+        });
+      } else if (withdrawal.crypto === "BTC") {
+        await ctx.db.patch(user._id, {
+          platformBalance: {
+            ...user.platformBalance,
+            BTC: (user.platformBalance.BTC ?? 0) + withdrawal.amount,
+          },
+        });
+      } else {
+        // Handle optional coins
+        const optionalCoin = withdrawal.crypto as "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
+        const currentBalance = (user.platformBalance[optionalCoin] as number | undefined) ?? 0;
+        await ctx.db.patch(user._id, {
+          platformBalance: {
+            ...user.platformBalance,
+            [optionalCoin]: currentBalance + withdrawal.amount,
+          },
+        });
+      }
     }
 
     let approvedBy = withdrawal.approvedBy;
