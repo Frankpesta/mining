@@ -39,16 +39,17 @@ type Ticket = {
 export default async function UserTicketDetailPage({
   params,
 }: {
-  params: { ticketId: string };
+  params: Promise<{ ticketId: string }>;
 }) {
   const current = await getCurrentUser();
   if (!current) {
     redirect("/auth/login");
   }
 
+  const { ticketId } = await params;
   const convex = getConvexClient();
   const ticketData = await convex.query(api.tickets.getTicketWithReplies, {
-    ticketId: params.ticketId as Id<"tickets">,
+    ticketId: ticketId as Id<"tickets">,
   });
 
   if (!ticketData || (ticketData.userId && ticketData.userId !== current.user._id)) {

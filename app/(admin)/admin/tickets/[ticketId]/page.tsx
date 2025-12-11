@@ -39,16 +39,17 @@ type Ticket = {
 export default async function AdminTicketDetailPage({
   params,
 }: {
-  params: { ticketId: string };
+  params: Promise<{ ticketId: string }>;
 }) {
   const current = await getCurrentUser();
   if (!current || current.user.role !== "admin") {
     redirect("/dashboard");
   }
 
+  const { ticketId } = await params;
   const convex = getConvexClient();
   const ticketData = await convex.query(api.tickets.getTicketWithReplies, {
-    ticketId: params.ticketId as Id<"tickets">,
+    ticketId: ticketId as Id<"tickets">,
   });
 
   if (!ticketData) {
