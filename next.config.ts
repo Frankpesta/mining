@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
   // Use webpack instead of Turbopack (needed for tap module handling)
@@ -10,9 +11,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Empty turbopack config to allow webpack to be used
-  // Webpack config below handles tap module stubbing from thread-stream
-  turbopack: {},
+  // Set output file tracing root to avoid lockfile warnings
+  outputFileTracingRoot: path.join(__dirname),
   webpack: (config, { isServer }) => {
     // Ignore warnings about missing test dependencies
     config.ignoreWarnings = [
