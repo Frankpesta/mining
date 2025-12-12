@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
+import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
+import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
 
 export const metadata: Metadata = {
   title: {
@@ -18,6 +20,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <SiteHeader />
       <main className="flex-1">{children}</main>
       <SiteFooter />
+      <WhatsAppFloat />
+      <SmartsuppChat />
     </div>
   );
 }

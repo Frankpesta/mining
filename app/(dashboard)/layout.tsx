@@ -4,6 +4,8 @@ import { signOutAction } from "@/app/(dashboard)/actions";
 import { AppShell } from "@/components/layout/app-shell";
 import type { SidebarNavItem } from "@/components/dashboard/sidebar-nav";
 import { getCurrentUser } from "@/lib/auth/session";
+import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
+import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: "home" },
@@ -34,14 +36,18 @@ export default async function DashboardLayout({
   }
 
   return (
-    <AppShell
-      brand={{ initials: "BH", title: "blockhashpro", subtitle: "Mining Marketplace" }}
-      navigation={navigation}
-      user={user}
-      signOutAction={signOutAction}
-      headerDescription={user.email}
-    >
-      {children}
-    </AppShell>
+    <>
+      <AppShell
+        brand={{ initials: "BH", title: "blockhashpro", subtitle: "Mining Marketplace" }}
+        navigation={navigation}
+        user={user}
+        signOutAction={signOutAction}
+        headerDescription={user.email}
+      >
+        {children}
+      </AppShell>
+      <WhatsAppFloat />
+      <SmartsuppChat />
+    </>
   );
 }
