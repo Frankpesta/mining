@@ -36,7 +36,7 @@ export function GoogleTranslate() {
     document.head.appendChild(script);
 
     // Load Google Translate API
-    const translateScript = document.createElement("script");
+    const translateScript = document.createElement("script"); // append script to head
     translateScript.type = "text/javascript";
     translateScript.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
     translateScript.async = true;
