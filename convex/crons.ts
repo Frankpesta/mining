@@ -296,16 +296,20 @@ export const processMiningOperationsAction = internalAction({
  * 2. Check the Convex Dashboard > Functions > Schedules to verify the cron is registered
  * 3. The cron will run automatically once deployed and registered
  */
-const crons = cronJobs();
+function setupCrons() {
+  const crons = cronJobs();
 
-// Run daily at 00:00 UTC (midnight UTC) to distribute daily mining profits
-crons.daily(
-  "processMiningOperations",
-  {
-    hourUTC: 0, // Run at midnight UTC (00:00)
-    minuteUTC: 0,
-  },
-  internal.crons.processMiningOperationsAction,
-);
+  // Run daily at 00:00 UTC (midnight UTC) to distribute daily mining profits
+  crons.daily(
+    "processMiningOperations",
+    {
+      hourUTC: 0, // Run at midnight UTC (00:00)
+      minuteUTC: 0,
+    },
+    internal.crons.processMiningOperationsAction,
+  );
 
-export default crons;
+  return crons;
+}
+
+export default setupCrons();
