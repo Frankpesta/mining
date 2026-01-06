@@ -16,6 +16,9 @@ function getStartOfDayUTC(timestamp: number): number {
  * Internal mutation to process mining operations
  * This processes all active mining operations and distributes daily profits based on ROI
  * Receives prices as a parameter since mutations can't fetch
+ * 
+ * NOTE: Currently only BTC and ETH mining operations are supported.
+ * The cron job fetches prices for BTC and ETH daily and updates mining balances accordingly.
  */
 export const processMiningOperationsMutation = internalMutation({
   args: {
@@ -96,6 +99,7 @@ export const processMiningOperationsMutation = internalMutation({
               },
             });
           } else if (coin === "ETH") {
+            // ETH: Add directly to platformBalance.ETH
             await ctx.db.patch(operation.userId, {
               platformBalance: {
                 ...user.platformBalance,
@@ -103,7 +107,8 @@ export const processMiningOperationsMutation = internalMutation({
               },
             });
           } else {
-            // For other coins, use the others record or optional fields
+            // For BTC and other coins, use the others record or optional fields
+            // BTC is handled here as an optional field in platformBalance
             const supportedOptionalCoins = ["BTC", "SOL", "LTC", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"] as const;
             const isOptionalCoin = supportedOptionalCoins.includes(coin as typeof supportedOptionalCoins[number]);
             
@@ -211,24 +216,74 @@ export const processMiningOperationsMutation = internalMutation({
 
 /**
  * Internal action to process mining operations
- * Note: Price fetching has been moved to frontend to avoid CoinGecko rate limiting.
- * This action now processes operations without prices - operations without valid prices will be skipped.
- * Prices should be fetched on the frontend and passed if needed, or operations will use default/fallback pricing.
+ * Fetches BTC and ETH prices from CoinGecko and processes daily mining earnings
  */
 export const processMiningOperationsAction = internalAction({
   args: {},
   handler: async (ctx) => {
-    // CoinGecko API calls have been moved to frontend (/api/crypto-prices)
-    // For cron jobs, we'll process operations without prices
-    // Operations that require prices will be skipped if prices aren't available
-    // This is acceptable since mining operations can continue without real-time price updates
+    console.log(`[processMiningOperations] Starting daily mining operations processing...`);
     
-    console.log(`[processMiningOperations] Processing operations without prices (prices now fetched on frontend)`);
+    // Fetch prices for BTC and ETH (the only coins being mined)
+    const prices: Record<string, number> = {};
     
-    // Call the mutation with empty prices - it will handle missing prices gracefully
-    await ctx.runMutation(internal.crons.processMiningOperationsMutation, {
-      prices: {},
+    try {
+      // Fetch BTC price
+      const btcResponse = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd",
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+      
+      if (btcResponse.ok) {
+        const btcData = await btcResponse.json();
+        if (btcData.bitcoin?.usd) {
+          prices["BTC"] = btcData.bitcoin.usd;
+          console.log(`[processMiningOperations] Fetched BTC price: $${prices["BTC"]}`);
+        }
+      } else {
+        console.warn(`[processMiningOperations] Failed to fetch BTC price: ${btcResponse.status}`);
+      }
+      
+      // Small delay to avoid rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      
+      // Fetch ETH price
+      const ethResponse = await fetch(
+        "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+        {
+          headers: {
+            Accept: "application/json",
+          },
+        }
+      );
+      
+      if (ethResponse.ok) {
+        const ethData = await ethResponse.json();
+        if (ethData.ethereum?.usd) {
+          prices["ETH"] = ethData.ethereum.usd;
+          console.log(`[processMiningOperations] Fetched ETH price: $${prices["ETH"]}`);
+        }
+      } else {
+        console.warn(`[processMiningOperations] Failed to fetch ETH price: ${ethResponse.status}`);
+      }
+    } catch (error) {
+      console.error(`[processMiningOperations] Error fetching prices:`, error);
+      // Continue with empty prices - operations will be skipped if prices are missing
+    }
+    
+    // Call the mutation with fetched prices
+    const result = await ctx.runMutation(internal.crons.processMiningOperationsMutation, {
+      prices,
     });
+    
+    console.log(
+      `[processMiningOperations] Completed. Processed: ${result.processed}, Completed: ${result.completed}, Payouts: ${result.payoutsDistributed}`
+    );
+    
+    return result;
   },
 });
 

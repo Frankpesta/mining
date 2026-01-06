@@ -12,16 +12,38 @@ const sumMiningBalance = (miningBalance: {
   BTC: number;
   ETH: number;
   LTC: number;
+  SOL?: number;
+  BNB?: number;
+  ADA?: number;
+  XRP?: number;
+  DOGE?: number;
+  DOT?: number;
+  MATIC?: number;
+  AVAX?: number;
+  ATOM?: number;
+  LINK?: number;
+  UNI?: number;
   others?: Record<string, number> | undefined;
 }) => {
   const coreTotal = (miningBalance.BTC ?? 0) + (miningBalance.ETH ?? 0) + (miningBalance.LTC ?? 0);
-  if (!miningBalance.others) {
-    return coreTotal;
-  }
-  return (
-    coreTotal +
-    Object.values(miningBalance.others).reduce((accumulator, value) => accumulator + value, 0)
-  );
+  const optionalCoins = 
+    (miningBalance.SOL ?? 0) +
+    (miningBalance.BNB ?? 0) +
+    (miningBalance.ADA ?? 0) +
+    (miningBalance.XRP ?? 0) +
+    (miningBalance.DOGE ?? 0) +
+    (miningBalance.DOT ?? 0) +
+    (miningBalance.MATIC ?? 0) +
+    (miningBalance.AVAX ?? 0) +
+    (miningBalance.ATOM ?? 0) +
+    (miningBalance.LINK ?? 0) +
+    (miningBalance.UNI ?? 0);
+  
+  const othersTotal = miningBalance.others
+    ? Object.values(miningBalance.others).reduce((accumulator, value) => accumulator + value, 0)
+    : 0;
+  
+  return coreTotal + optionalCoins + othersTotal;
 };
 
 export const getUserDashboardSummary = query({

@@ -121,36 +121,135 @@ export default async function DashboardOverviewPage() {
             <CardDescription>Realized rewards awaiting withdrawal.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">BTC</span>
-              <span className="tabular-nums">
-                {summary.balances.mining.BTC.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-medium">ETH</span>
-              <span className="tabular-nums">
-                {summary.balances.mining.ETH.toLocaleString()}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="font-medium">LTC</span>
-              <span className="tabular-nums">
-                {summary.balances.mining.LTC.toLocaleString()}
-              </span>
-            </div>
+            {summary.balances.mining.BTC > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">BTC</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.BTC.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.ETH > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">ETH</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.ETH.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.LTC > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">LTC</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.LTC.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.SOL && summary.balances.mining.SOL > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">SOL</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.SOL.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.BNB && summary.balances.mining.BNB > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">BNB</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.BNB.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.ADA && summary.balances.mining.ADA > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">ADA</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.ADA.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.XRP && summary.balances.mining.XRP > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">XRP</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.XRP.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.DOGE && summary.balances.mining.DOGE > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">DOGE</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.DOGE.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.DOT && summary.balances.mining.DOT > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">DOT</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.DOT.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.MATIC && summary.balances.mining.MATIC > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">MATIC</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.MATIC.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.AVAX && summary.balances.mining.AVAX > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">AVAX</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.AVAX.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.ATOM && summary.balances.mining.ATOM > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">ATOM</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.ATOM.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.LINK && summary.balances.mining.LINK > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">LINK</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.LINK.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
+            {summary.balances.mining.UNI && summary.balances.mining.UNI > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="font-medium">UNI</span>
+                <span className="tabular-nums">
+                  {summary.balances.mining.UNI.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
+                </span>
+              </div>
+            )}
             {summary.balances.mining.others
               ? (Object.entries(summary.balances.mining.others) as [string, number][]).map(([coin, amount]) => (
-                  <div key={coin} className="flex items-center justify-between">
-                    <span className="font-medium uppercase">{coin}</span>
-                    <span className="tabular-nums">{amount.toLocaleString()}</span>
-                  </div>
+                  amount > 0 && (
+                    <div key={coin} className="flex items-center justify-between">
+                      <span className="font-medium uppercase">{coin}</span>
+                      <span className="tabular-nums">{amount.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}</span>
+                    </div>
+                  )
                 ))
               : null}
+            {summary.metrics.miningBalance === 0 && (
+              <p className="text-xs text-muted-foreground py-2">No mining earnings yet. Earnings will appear here once your mining operations start generating rewards.</p>
+            )}
             <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs uppercase tracking-wide text-muted-foreground">
               <span>Total</span>
               <span className="text-sm font-semibold">
-                {summary.metrics.miningBalance.toLocaleString()}
+                {summary.metrics.miningBalance.toLocaleString(undefined, { minimumFractionDigits: 8, maximumFractionDigits: 8 })}
               </span>
             </div>
           </CardContent>

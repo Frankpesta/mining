@@ -74,7 +74,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
           <div>
             <CardTitle className="text-xl">{plan.name}</CardTitle>
             <CardDescription>
-              {plan.hashRate} {plan.hashRateUnit} • {plan.duration} days
+              {plan.hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} {plan.hashRateUnit} • {plan.duration} days
             </CardDescription>
           </div>
           <div className="text-right">
@@ -147,7 +147,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
                 <div className="mt-2 flex justify-between text-sm">
                   <span className="text-muted-foreground">Hash rate</span>
                   <span className="font-semibold">
-                    {plan.hashRate} {plan.hashRateUnit}
+                    {plan.hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} {plan.hashRateUnit}
                   </span>
                 </div>
               </div>

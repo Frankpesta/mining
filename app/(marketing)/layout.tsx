@@ -4,6 +4,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
 import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
+import { GoogleTranslate } from "@/components/ui/google-translate";
 
 export const metadata: Metadata = {
   title: {
@@ -18,6 +19,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <SiteHeader />
+      <div className="fixed top-20 right-4 z-50">
+        <GoogleTranslate />
+      </div>
       <main className="flex-1">{children}</main>
       <SiteFooter />
       <WhatsAppFloat />

@@ -7,7 +7,8 @@ import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency } from "@/lib/utils";
 
 function formatHashRate(hashRate: number, unit: string): string {
-  return `${hashRate.toLocaleString()} ${unit}`;
+  // Use actual value without K notation - show full number
+  return `${hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${unit}`;
 }
 
 function formatDuration(duration: number): string {
@@ -37,7 +38,21 @@ const faqs = [
 
 export default async function PricingPage() {
   const convex = getConvexClient();
-  const backendPlans = await convex.query(api.plans.listPlans, { activeOnly: true });
+  let backendPlans: Doc<"plans">[] = [];
+  
+  try {
+    backendPlans = await convex.query(api.plans.listPlans, { activeOnly: true });
+  } catch (error) {
+    console.error("Error fetching plans:", error);
+    // Fallback: try fetching all plans if activeOnly query fails
+    try {
+      backendPlans = await convex.query(api.plans.listPlans, { activeOnly: false });
+      // Filter active plans manually
+      backendPlans = backendPlans.filter((plan) => plan.isActive);
+    } catch (fallbackError) {
+      console.error("Error fetching all plans:", fallbackError);
+    }
+  }
 
   // Transform backend plans to match the pricing page format
   const plans = backendPlans.map((plan: Doc<"plans">, index: number) => {
