@@ -37,6 +37,11 @@ export async function POST(request: Request) {
     let lastError: unknown = null;
     for (const endpoint of DEFAULT_ENDPOINTS) {
       try {
+        console.log(`[Translate API] Attempting ${endpoint} with payload:`, JSON.stringify({
+          ...payload,
+          q: payload.q.substring(0, 100) + "... (truncated)"
+        }));
+        
         const res = await fetch(endpoint, {
           method: "POST",
           headers: {
@@ -47,15 +52,59 @@ export async function POST(request: Request) {
         });
 
         if (!res.ok) {
-          lastError = `Upstream ${endpoint} error: ${res.status}`;
+          const errorText = await res.text();
+          console.error(`[Translate API] ${endpoint} returned ${res.status}:`, errorText.substring(0, 200));
+          lastError = `Upstream ${endpoint} error: ${res.status} - ${errorText.substring(0, 100)}`;
           continue;
         }
 
         const data = await res.json();
-        const translated = (data.translatedText as string) ?? "";
+        console.log(`[Translate API] Response from ${endpoint}:`, JSON.stringify(data).substring(0, 500));
+        
+        // LibreTranslate can return either:
+        // 1. { translatedText: "..." } - single string
+        // 2. { translatedText: ["...", "..."] } - array (some endpoints)
+        let translated: string;
+        if (Array.isArray(data.translatedText)) {
+          translated = data.translatedText.join(JOIN_TOKEN);
+        } else if (typeof data.translatedText === "string") {
+          translated = data.translatedText;
+        } else if (data.translated) {
+          // Some endpoints use "translated" instead of "translatedText"
+          translated = typeof data.translated === "string" ? data.translated : data.translated.join(JOIN_TOKEN);
+        } else {
+          console.error(`[Translate API] Unexpected response format from ${endpoint}:`, JSON.stringify(data));
+          lastError = `Unexpected response format from ${endpoint}`;
+          continue;
+        }
+        
         const translatedTexts = translated.split(JOIN_TOKEN);
+        console.log(`[Translate API] Split into ${translatedTexts.length} texts (expected ${texts.length})`);
+        
+        // Verify we got the right number of translations
+        if (translatedTexts.length !== texts.length) {
+          console.warn(`[Translate API] Translation count mismatch: got ${translatedTexts.length}, expected ${texts.length}`);
+          // Try to pad or trim to match
+          if (translatedTexts.length < texts.length) {
+            translatedTexts.push(...texts.slice(translatedTexts.length));
+          } else {
+            translatedTexts.splice(texts.length);
+          }
+        }
+        
+        // Check if translations are actually different
+        const sampleCheck = Math.min(3, texts.length);
+        for (let i = 0; i < sampleCheck; i++) {
+          if (texts[i] !== translatedTexts[i]) {
+            console.log(`[Translate API] Sample translation [${i}]: "${texts[i]}" → "${translatedTexts[i]}"`);
+          } else {
+            console.warn(`[Translate API] Sample translation [${i}] unchanged: "${texts[i]}"`);
+          }
+        }
+        
         return NextResponse.json({ translatedTexts });
       } catch (err) {
+        console.error(`[Translate API] Error with ${endpoint}:`, err);
         lastError = err;
         continue;
       }
