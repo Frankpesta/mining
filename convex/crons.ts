@@ -218,7 +218,7 @@ export const processMiningOperationsMutation = internalMutation({
  * Internal action to process mining operations
  * Fetches BTC and ETH prices from CoinGecko and processes daily mining earnings
  */
-export const processMiningOperationsAction = internalAction({
+const processMiningOperationsActionImpl = internalAction({
   args: {},
   handler: async (ctx) => {
     console.log(`[processMiningOperations] Starting daily mining operations processing...`);
@@ -287,6 +287,9 @@ export const processMiningOperationsAction = internalAction({
   },
 });
 
+// Export after definition to avoid circular reference issues
+export const processMiningOperationsAction = processMiningOperationsActionImpl;
+
 /**
  * Convex cron jobs configuration
  * This schedules the mining operations processor to run automatically
@@ -296,20 +299,17 @@ export const processMiningOperationsAction = internalAction({
  * 2. Check the Convex Dashboard > Functions > Schedules to verify the cron is registered
  * 3. The cron will run automatically once deployed and registered
  */
-function setupCrons() {
-  const crons = cronJobs();
+const crons = cronJobs();
 
-  // Run daily at 00:00 UTC (midnight UTC) to distribute daily mining profits
-  crons.daily(
-    "processMiningOperations",
-    {
-      hourUTC: 0, // Run at midnight UTC (00:00)
-      minuteUTC: 0,
-    },
-    internal.crons.processMiningOperationsAction,
-  );
+// Run daily at 00:00 UTC (midnight UTC) to distribute daily mining profits
+// Reference the action after it's been fully defined and exported
+crons.daily(
+  "processMiningOperations",
+  {
+    hourUTC: 0, // Run at midnight UTC (00:00)
+    minuteUTC: 0,
+  },
+  internal.crons.processMiningOperationsAction,
+);
 
-  return crons;
-}
-
-export default setupCrons();
+export default crons;
