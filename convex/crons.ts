@@ -225,7 +225,7 @@ type ProcessMiningResult = {
  * Internal action to process mining operations
  * Fetches BTC and ETH prices from CoinGecko and processes daily mining earnings
  */
-const processMiningOperationsActionImpl = internalAction<{},{ processed: number; completed: number; payoutsDistributed: number; timestamp: number }>({
+const processMiningOperationsActionImpl = internalAction({
   args: {},
   handler: async (ctx): Promise<ProcessMiningResult> => {
     console.log(`[processMiningOperations] Starting daily mining operations processing...`);
