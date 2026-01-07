@@ -27,26 +27,32 @@ type TextNodeRecord = {
 async function translateBatch(texts: string[], target: string, source = "en"): Promise<string[]> {
   if (texts.length === 0 || target === source) return texts;
 
-  const res = await fetch("/api/translate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      texts,
-      target,
-      source,
-    }),
-  });
+  try {
+    const res = await fetch("/api/translate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        texts,
+        target,
+        source,
+      }),
+    });
 
-  if (!res.ok) {
-    throw new Error(`Translate failed: ${res.status}`);
+    if (!res.ok) {
+      console.warn("Translate request failed:", res.status);
+      return texts;
+    }
+
+    const data = await res.json();
+    const translatedTexts = (data.translatedTexts as string[]) ?? [];
+    return translatedTexts.length ? translatedTexts : texts;
+  } catch (err) {
+    console.error("Translate fetch error:", err);
+    return texts;
   }
-
-  const data = await res.json();
-  const translatedTexts = (data.translatedTexts as string[]) ?? [];
-  return translatedTexts.length ? translatedTexts : texts;
 }
 
 export default function LibreTranslate({ className = "" }: { className?: string }) {

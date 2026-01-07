@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
 const JOIN_TOKEN = "\n|||LTSEP|||\n";
-const DEFAULT_ENDPOINT = process.env.LIBRE_TRANSLATE_URL || "https://libretranslate.de/translate";
+const DEFAULT_ENDPOINTS = [
+  process.env.LIBRE_TRANSLATE_URL,
+  "https://libretranslate.de/translate",
+  "https://translate.argosopentech.com/translate",
+  "https://libretranslate.com/translate",
+].filter(Boolean) as string[];
 
 type RequestBody = {
   texts?: string[];
@@ -29,31 +34,39 @@ export async function POST(request: Request) {
       format: "text",
     };
 
-    const res = await fetch(DEFAULT_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(payload),
-      // Avoid sending credentials; public API
-    });
+    let lastError: unknown = null;
+    for (const endpoint of DEFAULT_ENDPOINTS) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
 
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: `Upstream translate error: ${res.status}` },
-        { status: 502 },
-      );
+        if (!res.ok) {
+          lastError = `Upstream ${endpoint} error: ${res.status}`;
+          continue;
+        }
+
+        const data = await res.json();
+        const translated = (data.translatedText as string) ?? "";
+        const translatedTexts = translated.split(JOIN_TOKEN);
+        return NextResponse.json({ translatedTexts });
+      } catch (err) {
+        lastError = err;
+        continue;
+      }
     }
 
-    const data = await res.json();
-    const translated = (data.translatedText as string) ?? "";
-    const translatedTexts = translated.split(JOIN_TOKEN);
-
-    return NextResponse.json({ translatedTexts });
+    console.error("Translate upstream failed, returning originals:", lastError);
+    // Fallback: return originals to avoid front-end errors
+    return NextResponse.json({ translatedTexts: texts, error: "translate_fallback" });
   } catch (error) {
     console.error("Translate API error:", error);
-    return NextResponse.json({ error: "Internal translate error" }, { status: 500 });
+    return NextResponse.json({ translatedTexts: [], error: "Internal translate error" }, { status: 500 });
   }
 }
 
