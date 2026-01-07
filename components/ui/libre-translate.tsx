@@ -59,11 +59,11 @@ export default function LibreTranslate({ className = "" }: { className?: string 
   const [lang, setLang] = useState<string>("en");
   const [loading, setLoading] = useState<boolean>(false);
   const textNodesRef = useRef<TextNodeRecord[] | null>(null);
+  const translationMapRef = useRef<Map<string, string>>(new Map()); // original -> translated
   const sourceLang = "en";
 
-  // Collect text nodes once on client
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+  // Function to collect text nodes
+  const collectTextNodes = (): TextNodeRecord[] => {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
       acceptNode: (node) => {
         const text = node.textContent?.trim() ?? "";
@@ -85,43 +85,129 @@ export default function LibreTranslate({ className = "" }: { className?: string 
       nodes.push({ node: current as Text, original: current.textContent ?? "" });
       current = walker.nextNode();
     }
-    textNodesRef.current = nodes;
+    return nodes;
+  };
+
+  // Function to apply translations to nodes
+  const applyTranslations = (nodes: TextNodeRecord[], translations: Map<string, string>) => {
+    let updatedCount = 0;
+    nodes.forEach(({ node, original }) => {
+      const translated = translations.get(original);
+      if (translated && translated !== original) {
+        // Directly update the text content
+        if (node.textContent === original || node.textContent !== translated) {
+          node.textContent = translated;
+          updatedCount++;
+        }
+      }
+    });
+    return updatedCount;
+  };
+
+  // Collect text nodes once on client
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    textNodesRef.current = collectTextNodes();
   }, []);
 
   // Apply translation when lang changes
   useEffect(() => {
+    let observer: MutationObserver | null = null;
+    
     const run = async () => {
       console.log("Translation effect triggered:", { lang, sourceLang, hasNodes: !!textNodesRef.current });
-      if (!textNodesRef.current) {
-        console.warn("No text nodes collected yet");
+      
+      // Re-collect nodes in case DOM changed
+      const nodes = collectTextNodes();
+      textNodesRef.current = nodes;
+      
+      if (nodes.length === 0) {
+        console.warn("No text nodes found");
         return;
       }
+      
       if (lang === sourceLang) {
         console.log("Restoring original text");
+        translationMapRef.current.clear();
         // Restore originals
-        textNodesRef.current.forEach(({ node, original }) => {
+        nodes.forEach(({ node, original }) => {
           node.textContent = original;
         });
         return;
       }
-      console.log(`Translating ${textNodesRef.current.length} text nodes to ${lang}`);
+      
+      console.log(`Translating ${nodes.length} text nodes to ${lang}`);
       setLoading(true);
       try {
-        const originals = textNodesRef.current.map((t) => t.original);
+        const originals = nodes.map((t) => t.original);
         console.log("Sending translation request:", { count: originals.length, target: lang, source: sourceLang });
         const translated = await translateBatch(originals, lang, sourceLang);
         console.log("Translation received:", { count: translated.length });
-        textNodesRef.current.forEach((t, idx) => {
-          t.node.textContent = translated[idx] ?? t.original;
+        
+        // Build translation map
+        const translationMap = new Map<string, string>();
+        originals.forEach((original, idx) => {
+          const translatedText = translated[idx] ?? original;
+          if (translatedText !== original) {
+            translationMap.set(original, translatedText);
+          }
         });
-        console.log("Translation applied successfully");
+        translationMapRef.current = translationMap;
+        
+        // Debug: Check if translations are different
+        const sampleCount = Math.min(5, originals.length);
+        console.log("Sample translations (first", sampleCount, "):");
+        for (let i = 0; i < sampleCount; i++) {
+          console.log(`  [${i}] Original: "${originals[i]}" → Translated: "${translated[i]}"`);
+        }
+        
+        // Apply translations immediately
+        const updatedCount = applyTranslations(nodes, translationMap);
+        console.log(`Translation applied: ${updatedCount} nodes updated out of ${nodes.length}`);
+        
+        // Set up MutationObserver to re-apply translations when React updates DOM
+        observer = new MutationObserver(() => {
+          const currentNodes = collectTextNodes();
+          applyTranslations(currentNodes, translationMap);
+        });
+        
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+        
+        // Re-apply after delays to catch React updates
+        setTimeout(() => {
+          const currentNodes = collectTextNodes();
+          const reapplyCount = applyTranslations(currentNodes, translationMap);
+          if (reapplyCount > 0) {
+            console.log(`Re-applied translations to ${reapplyCount} nodes after React update`);
+          }
+        }, 100);
+        
+        setTimeout(() => {
+          const currentNodes = collectTextNodes();
+          const reapplyCount = applyTranslations(currentNodes, translationMap);
+          if (reapplyCount > 0) {
+            console.log(`Re-applied translations to ${reapplyCount} nodes after second delay`);
+          }
+        }, 500);
       } catch (err) {
         console.error("LibreTranslate error:", err);
       } finally {
         setLoading(false);
       }
     };
+    
     run();
+    
+    // Cleanup function
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
   }, [lang, sourceLang]);
 
   const options = useMemo(() => LANGUAGES, []);
