@@ -39,6 +39,20 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
     if (typeof window === "undefined") return;
 
     const containerId = "google_translate_element";
+    const wrapperId = "google_translate_wrapper";
+
+    // Ensure a single DOM container outside React tree to avoid React/Translate DOM conflicts
+    let container = document.getElementById(wrapperId) as HTMLDivElement | null;
+    if (!container) {
+      container = document.createElement("div");
+      container.id = wrapperId;
+      container.className = `google-translate-container ${className ?? ""}`.trim();
+      container.innerHTML = `<div id="${containerId}" class="google-translate-wrapper"></div>`;
+      document.body.appendChild(container);
+    } else {
+      // Update classes if needed
+      container.className = `google-translate-container ${className ?? ""}`.trim();
+    }
 
     const initTranslate = () => {
       if (window.__googleTranslateInitialized) return;
@@ -47,8 +61,8 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
         | undefined;
       const inlineLayout = translateElement?.InlineLayout;
       if (!translateElement) return;
-      const container = document.getElementById(containerId);
-      if (!container) return;
+      const target = document.getElementById(containerId);
+      if (!target) return;
 
       window.googleTranslateElementInit = () => {
         if (window.__googleTranslateInitialized) return;
@@ -79,16 +93,10 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
       initTranslate();
     }
 
-    // Do not remove scripts on unmount to avoid re-adding and DOM thrash.
-  }, []);
+    // Keep scripts and container; do not clean up to avoid thrash and reflow issues.
+  }, [className]);
 
-  return (
-    <div
-      className={`google-translate-container ${className ?? ""}`}
-      suppressHydrationWarning
-    >
-      <div id="google_translate_element" className="google-translate-wrapper" />
-    </div>
-  );
+  // Nothing to render into the React tree; widget lives in a portal container.
+  return null;
 }
 
