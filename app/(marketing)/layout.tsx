@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
 import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
-import { GoogleTranslate } from "@/components/ui/google-translate";
+import GoogleTranslate from "@/components/ui/google-translate";
 
 export const metadata: Metadata = {
   title: {

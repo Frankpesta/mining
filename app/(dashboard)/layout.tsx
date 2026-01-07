@@ -6,7 +6,7 @@ import type { SidebarNavItem } from "@/components/dashboard/sidebar-nav";
 import { getCurrentUser } from "@/lib/auth/session";
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
 import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
-import { GoogleTranslate } from "@/components/ui/google-translate";
+import GoogleTranslate from "@/components/ui/google-translate";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: "home" },
