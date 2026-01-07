@@ -1,98 +1,128 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
     googleTranslateElementInit?: () => void;
-    google?: GoogleTranslate;
+    // Google translate widget adds `google.translate` to window
+    google?: GoogleTranslateNamespace;
     __googleTranslateInitialized?: boolean;
   }
 }
 
-type TranslateElementCtor = {
-  new (options: Record<string, unknown>, elementId: string): unknown;
-  InlineLayout?: {
-    SIMPLE?: unknown;
+type GoogleTranslateNamespace = {
+  translate?: {
+    TranslateElement?: {
+      new (options: Record<string, unknown>, elementId: string): void;
+      InlineLayout?: {
+        SIMPLE?: unknown;
+      };
+    };
   };
 };
 
-type GoogleTranslate = {
-  translate?: {
-    TranslateElement?: TranslateElementCtor;
-  };
+type GoogleTranslateProps = {
+  className?: string;
+  pageLanguage?: string; // default: 'en'
 };
 
 /**
- * Google Translate Widget Component
- * Follows Next.js best practices by:
- * - Using useEffect to load script only on client side
- * - Preventing hydration mismatches
- * - Properly cleaning up on unmount
+ * Google Translate Widget – Client Component
+ * - Mounts widget completely outside React tree
+ * - Prevents most hydration / insertBefore conflicts
+ * - Cleans up properly
  */
-type GoogleTranslateProps = {
-  className?: string;
-};
+export default function GoogleTranslate({
+  className = "",
+  pageLanguage = "en",
+}: GoogleTranslateProps) {
+  const mountedRef = useRef(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-let translateContainer: HTMLDivElement | null = null;
-let translateScriptInjected = false;
-
-export function GoogleTranslate({ className }: GoogleTranslateProps) {
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    // Prevent double execution in dev (React 18 Strict Mode)
+    if (mountedRef.current) return;
+    mountedRef.current = true;
 
-    // Ensure a single container outside React tree to avoid React/Google DOM conflicts
-    const ensureContainer = () => {
-      if (!translateContainer) {
-        translateContainer = document.createElement("div");
-        translateContainer.id = "google_translate_wrapper";
-        translateContainer.className = `google-translate-container ${className ?? ""}`.trim();
-        translateContainer.innerHTML =
-          '<div id="google_translate_element" class="google-translate-wrapper"></div>';
-        document.body.appendChild(translateContainer);
-      } else if (className) {
-        translateContainer.className = `google-translate-container ${className}`.trim();
+    // 1. Create container if it doesn't exist
+    if (!containerRef.current) {
+      const wrapper = document.createElement("div");
+      wrapper.id = "google-translate-wrapper";
+      wrapper.className = `google-translate-container ${className}`.trim();
+
+      const inner = document.createElement("div");
+      inner.id = "google_translate_element";
+      wrapper.appendChild(inner);
+
+      // You can choose where to put it
+      document.body.appendChild(wrapper);
+      // Alternative positions:
+      // document.getElementById("some-header")?.appendChild(wrapper);
+      // document.querySelector("header")?.prepend(wrapper);
+
+      containerRef.current = wrapper;
+    }
+
+    const initGoogleTranslate = () => {
+      if (window.__googleTranslateInitialized) return;
+      window.__googleTranslateInitialized = true;
+
+      // Safety check
+      if (!window.google?.translate?.TranslateElement) return;
+
+      try {
+        new window.google.translate.TranslateElement(
+          {
+            pageLanguage,
+            layout: window.google.translate.TranslateElement?.InlineLayout?.SIMPLE,
+            autoDisplay: false,
+          },
+          "google_translate_element"
+        );
+      } catch (e) {
+        console.warn("Google Translate init failed", e);
       }
     };
 
-    const initTranslate = () => {
-      if (window.__googleTranslateInitialized) return;
-      const translateElement = (window.google as GoogleTranslate)?.translate?.TranslateElement as
-        | TranslateElementCtor
-        | undefined;
-      const inlineLayout = translateElement?.InlineLayout;
-      if (!translateElement) return;
-      const target = document.getElementById("google_translate_element");
-      if (!target) return;
-      window.__googleTranslateInitialized = true;
-      new translateElement(
-        {
-          pageLanguage: "en",
-          layout: inlineLayout?.SIMPLE ?? undefined,
-          autoDisplay: false,
-        },
-        "google_translate_element",
-      );
+    // 2. Already loaded? → just initialize
+    if (window.google?.translate?.TranslateElement) {
+      initGoogleTranslate();
+      return;
+    }
+
+    // 3. Not loaded yet → inject script
+    const script = document.createElement("script");
+    script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+    script.async = true;
+    script.defer = true;
+
+    window.googleTranslateElementInit = initGoogleTranslate;
+
+    script.onload = () => {
+      // Give it a tiny delay - sometimes google is not yet ready
+      setTimeout(initGoogleTranslate, 100);
     };
 
-    ensureContainer();
+    script.onerror = () => {
+      console.error("Failed to load Google Translate script");
+    };
 
-    if (!translateScriptInjected) {
-      translateScriptInjected = true;
-      window.googleTranslateElementInit = initTranslate;
-      const translateScript = document.createElement("script");
-      translateScript.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-      translateScript.async = true;
-      translateScript.defer = true;
-      translateScript.onload = initTranslate;
-      document.head.appendChild(translateScript);
-    } else {
-      window.googleTranslateElementInit = initTranslate;
-      initTranslate();
-    }
-  }, [className]);
+    document.head.appendChild(script);
 
-  // Nothing rendered in React tree; widget lives in body-level container
+    // Cleanup
+    return () => {
+      // Very optional – most people don't remove it
+      // But if you really want to cleanup:
+      if (containerRef.current?.parentNode) {
+        containerRef.current.parentNode.removeChild(containerRef.current);
+      }
+      mountedRef.current = false;
+      delete window.googleTranslateElementInit;
+      window.__googleTranslateInitialized = false;
+    };
+  }, [className, pageLanguage]);
+
+  // We render nothing in React tree
   return null;
 }
-
