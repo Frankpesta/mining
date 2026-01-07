@@ -29,9 +29,9 @@ type GoogleTranslateProps = {
 
 /**
  * Google Translate Widget – Client Component
- * - Mounts widget completely outside React tree
- * - Prevents most hydration / insertBefore conflicts
- * - Cleans up properly
+ * - Renders a stable container in the React tree
+ * - Guards against double init in Strict Mode
+ * - Leaves scripts mounted to avoid DOM churn
  */
 export default function GoogleTranslate({
   className = "",
@@ -45,42 +45,26 @@ export default function GoogleTranslate({
     if (mountedRef.current) return;
     mountedRef.current = true;
 
-    // 1. Create container if it doesn't exist
-    if (!containerRef.current) {
-      const wrapper = document.createElement("div");
-      wrapper.id = "google-translate-wrapper";
-      wrapper.className = `google-translate-container ${className}`.trim();
-
-      const inner = document.createElement("div");
-      inner.id = "google_translate_element";
-      wrapper.appendChild(inner);
-
-      // You can choose where to put it
-      document.body.appendChild(wrapper);
-      // Alternative positions:
-      // document.getElementById("some-header")?.appendChild(wrapper);
-      // document.querySelector("header")?.prepend(wrapper);
-
-      containerRef.current = wrapper;
-    }
-
     const initGoogleTranslate = () => {
       if (window.__googleTranslateInitialized) return;
-      window.__googleTranslateInitialized = true;
-
-      // Safety check
-      if (!window.google?.translate?.TranslateElement) return;
+      // Safety checks
+      const translateCtor = window.google?.translate?.TranslateElement;
+      const target = containerRef.current;
+      if (!translateCtor || !target) return;
 
       try {
-        new window.google.translate.TranslateElement(
+        window.__googleTranslateInitialized = true;
+        new translateCtor(
           {
             pageLanguage,
-            layout: window.google.translate.TranslateElement?.InlineLayout?.SIMPLE,
+            layout: translateCtor?.InlineLayout?.SIMPLE,
             autoDisplay: false,
           },
-          "google_translate_element"
+          target.id || "google_translate_element",
         );
       } catch (e) {
+        // If it fails, allow a retry on next render by clearing the flag
+        window.__googleTranslateInitialized = false;
         console.warn("Google Translate init failed", e);
       }
     };
@@ -110,19 +94,12 @@ export default function GoogleTranslate({
 
     document.head.appendChild(script);
 
-    // Cleanup
-    return () => {
-      // Very optional – most people don't remove it
-      // But if you really want to cleanup:
-      if (containerRef.current?.parentNode) {
-        containerRef.current.parentNode.removeChild(containerRef.current);
-      }
-      mountedRef.current = false;
-      delete window.googleTranslateElementInit;
-      window.__googleTranslateInitialized = false;
-    };
-  }, [className, pageLanguage]);
+    // No cleanup: keep script and container to avoid reflows / conflicts
+  }, [pageLanguage]);
 
-  // We render nothing in React tree
-  return null;
+  return (
+    <div className={`google-translate-container ${className}`} suppressHydrationWarning>
+      <div id="google_translate_element" className="google-translate-wrapper" ref={containerRef} />
+    </div>
+  );
 }
