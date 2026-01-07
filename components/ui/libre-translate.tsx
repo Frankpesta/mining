@@ -91,21 +91,30 @@ export default function LibreTranslate({ className = "" }: { className?: string 
   // Apply translation when lang changes
   useEffect(() => {
     const run = async () => {
-      if (!textNodesRef.current) return;
+      console.log("Translation effect triggered:", { lang, sourceLang, hasNodes: !!textNodesRef.current });
+      if (!textNodesRef.current) {
+        console.warn("No text nodes collected yet");
+        return;
+      }
       if (lang === sourceLang) {
+        console.log("Restoring original text");
         // Restore originals
         textNodesRef.current.forEach(({ node, original }) => {
           node.textContent = original;
         });
         return;
       }
+      console.log(`Translating ${textNodesRef.current.length} text nodes to ${lang}`);
       setLoading(true);
       try {
         const originals = textNodesRef.current.map((t) => t.original);
+        console.log("Sending translation request:", { count: originals.length, target: lang, source: sourceLang });
         const translated = await translateBatch(originals, lang, sourceLang);
+        console.log("Translation received:", { count: translated.length });
         textNodesRef.current.forEach((t, idx) => {
           t.node.textContent = translated[idx] ?? t.original;
         });
+        console.log("Translation applied successfully");
       } catch (err) {
         console.error("LibreTranslate error:", err);
       } finally {
@@ -113,15 +122,21 @@ export default function LibreTranslate({ className = "" }: { className?: string 
       }
     };
     run();
-  }, [lang]);
+  }, [lang, sourceLang]);
 
   const options = useMemo(() => LANGUAGES, []);
+
+  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newLang = e.target.value;
+    console.log("Language change requested:", { from: lang, to: newLang });
+    setLang(newLang);
+  };
 
   return (
     <div className={`translate-select-wrapper ${className}`}>
       <select
         value={lang}
-        onChange={(e) => setLang(e.target.value)}
+        onChange={handleLanguageChange}
         disabled={loading}
         className="translate-select"
       >
