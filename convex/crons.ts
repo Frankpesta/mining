@@ -214,13 +214,20 @@ export const processMiningOperationsMutation = internalMutation({
   },
 });
 
+type ProcessMiningResult = {
+  processed: number;
+  completed: number;
+  payoutsDistributed: number;
+  timestamp: number;
+};
+
 /**
  * Internal action to process mining operations
  * Fetches BTC and ETH prices from CoinGecko and processes daily mining earnings
  */
-const processMiningOperationsActionImpl = internalAction({
+const processMiningOperationsActionImpl = internalAction<{},{ processed: number; completed: number; payoutsDistributed: number; timestamp: number }>({
   args: {},
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<ProcessMiningResult> => {
     console.log(`[processMiningOperations] Starting daily mining operations processing...`);
     
     // Fetch prices for BTC and ETH (the only coins being mined)
@@ -277,7 +284,7 @@ const processMiningOperationsActionImpl = internalAction({
     // Call the mutation with fetched prices
     const result = await ctx.runMutation(internal.crons.processMiningOperationsMutation, {
       prices,
-    });
+    }) as ProcessMiningResult;
     
     console.log(
       `[processMiningOperations] Completed. Processed: ${result.processed}, Completed: ${result.completed}, Payouts: ${result.payoutsDistributed}`
