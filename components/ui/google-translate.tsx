@@ -36,6 +36,8 @@ type GoogleTranslateProps = {
 
 export function GoogleTranslate({ className }: GoogleTranslateProps) {
   useEffect(() => {
+    // Run once; guard against React strict mode double-invoke in dev
+    let mounted = true;
     if (typeof window === "undefined") return;
 
     const containerId = "google_translate_element";
@@ -49,12 +51,10 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
       container.className = `google-translate-container ${className ?? ""}`.trim();
       container.innerHTML = `<div id="${containerId}" class="google-translate-wrapper"></div>`;
       document.body.appendChild(container);
-    } else {
-      // Update classes if needed
-      container.className = `google-translate-container ${className ?? ""}`.trim();
     }
 
     const initTranslate = () => {
+      if (!mounted) return;
       if (window.__googleTranslateInitialized) return;
       const translateElement = (window.google as GoogleTranslate)?.translate?.TranslateElement as
         | TranslateElementCtor
@@ -95,6 +95,9 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
     }
 
     // Keep scripts and container; do not clean up to avoid thrash and reflow issues.
+    return () => {
+      mounted = false;
+    };
   }, [className]);
 
   // Nothing to render into the React tree; widget lives in a portal container.
