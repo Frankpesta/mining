@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 declare global {
   interface Window {
@@ -35,54 +35,36 @@ type GoogleTranslateProps = {
 };
 
 export function GoogleTranslate({ className }: GoogleTranslateProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Track script injection and initialization at module level to avoid re-entrant DOM ops
   useEffect(() => {
-    // Run once; guard against React strict mode double-invoke in dev
-    let mounted = true;
     if (typeof window === "undefined") return;
 
-    const containerId = "google_translate_element";
-    const wrapperId = "google_translate_wrapper";
-
-    // Ensure a single DOM container outside React tree to avoid React/Translate DOM conflicts
-    let container = document.getElementById(wrapperId) as HTMLDivElement | null;
-    if (!container) {
-      container = document.createElement("div");
-      container.id = wrapperId;
-      container.className = `google-translate-container ${className ?? ""}`.trim();
-      container.innerHTML = `<div id="${containerId}" class="google-translate-wrapper"></div>`;
-      document.body.appendChild(container);
-    }
-
     const initTranslate = () => {
-      if (!mounted) return;
       if (window.__googleTranslateInitialized) return;
       const translateElement = (window.google as GoogleTranslate)?.translate?.TranslateElement as
         | TranslateElementCtor
         | undefined;
       const inlineLayout = translateElement?.InlineLayout;
       if (!translateElement) return;
-      const target = document.getElementById(containerId);
-      if (!target) return;
+      if (!containerRef.current) return;
 
-      window.googleTranslateElementInit = () => {
-        if (window.__googleTranslateInitialized) return;
-        // Mark initialized before constructing to avoid re-entrancy issues
-        window.__googleTranslateInitialized = true;
-        new translateElement(
-          {
-            pageLanguage: "en",
-            // Show all available languages by omitting includedLanguages
-            layout: inlineLayout?.SIMPLE ?? undefined,
-            autoDisplay: false,
-          },
-          containerId,
-        );
-      };
-
-      window.googleTranslateElementInit();
+      window.__googleTranslateInitialized = true;
+      const targetId = containerRef.current.id || "google_translate_element";
+      new translateElement(
+        {
+          pageLanguage: "en",
+          // Show all available languages by omitting includedLanguages
+          layout: inlineLayout?.SIMPLE ?? undefined,
+          autoDisplay: false,
+        },
+        targetId,
+      );
     };
 
-    if (!document.querySelector('script[src*="translate.google.com/translate_a/element.js"]')) {
+    const scriptPresent = document.querySelector('script[src*="translate.google.com/translate_a/element.js"]');
+    if (!scriptPresent) {
       window.googleTranslateElementInit = initTranslate;
       const translateScript = document.createElement("script");
       translateScript.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
@@ -91,16 +73,15 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
       translateScript.onload = initTranslate;
       document.head.appendChild(translateScript);
     } else {
+      window.googleTranslateElementInit = initTranslate;
       initTranslate();
     }
+  }, []);
 
-    // Keep scripts and container; do not clean up to avoid thrash and reflow issues.
-    return () => {
-      mounted = false;
-    };
-  }, [className]);
-
-  // Nothing to render into the React tree; widget lives in a portal container.
-  return null;
+  return (
+    <div className={`google-translate-container ${className ?? ""}`} suppressHydrationWarning>
+      <div id="google_translate_element" className="google-translate-wrapper" ref={containerRef} />
+    </div>
+  );
 }
 
