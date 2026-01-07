@@ -28,83 +28,100 @@ function GoogleTranslateClient({
   className = "",
   pageLanguage = "en",
 }: GoogleTranslateProps) {
+  const mountPoint = useRef<HTMLDivElement>(null);
+  const portalContainer = useRef<HTMLDivElement | null>(null);
   const initialized = useRef(false);
 
   useEffect(() => {
-    if (initialized.current) return;
+    if (!mountPoint.current || initialized.current) return;
+    initialized.current = true;
 
-    const targetId = "google_translate_element";
+    // Create container outside React's control
+    const portal = document.createElement('div');
+    portal.className = 'google-translate-portal';
+    const uniqueId = `google_translate_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    portal.id = uniqueId;
+    
+    portalContainer.current = portal;
 
     const init = () => {
       const TranslateElement = window.google?.translate?.TranslateElement;
-      if (!TranslateElement || initialized.current) return;
-
-      // Check if already initialized
-      const existingWidget = document.querySelector(`#${targetId} .goog-te-gadget`);
-      if (existingWidget) {
-        initialized.current = true;
-        return;
-      }
+      if (!TranslateElement || !portalContainer.current) return;
 
       try {
+        const existing = portalContainer.current.querySelector('.goog-te-gadget');
+        if (existing) return;
+
         new TranslateElement(
           {
             pageLanguage,
             autoDisplay: false,
             layout: TranslateElement?.InlineLayout?.SIMPLE,
           },
-          targetId,
+          uniqueId,
         );
-        initialized.current = true;
       } catch (error) {
-        console.error("Google Translate initialization error:", error);
+        console.error("Google Translate error:", error);
       }
     };
 
-    const timer = setTimeout(() => {
-      const scriptPresent = document.querySelector(
+    const loadAndInit = () => {
+      if (!mountPoint.current || !portalContainer.current) return;
+
+      // Append portal to mount point
+      mountPoint.current.appendChild(portalContainer.current);
+
+      const scriptExists = document.querySelector(
         'script[src*="translate.google.com/translate_a/element.js"]',
       );
 
-      if (!scriptPresent) {
+      if (scriptExists && window.google?.translate?.TranslateElement) {
+        setTimeout(init, 150);
+      } else if (scriptExists) {
+        window.googleTranslateElementInit = init;
+        setTimeout(init, 500);
+      } else {
         window.googleTranslateElementInit = init;
         const script = document.createElement("script");
         script.src =
           "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
         script.async = true;
-        script.onerror = () => {
-          console.error("Failed to load Google Translate script");
-        };
         document.head.appendChild(script);
-      } else if (window.google?.translate?.TranslateElement) {
-        init();
-      } else {
-        window.googleTranslateElementInit = init;
       }
-    }, 200);
+    };
+
+    const timer = setTimeout(loadAndInit, 500);
 
     return () => {
       clearTimeout(timer);
+      if (portalContainer.current && mountPoint.current) {
+        try {
+          if (mountPoint.current.contains(portalContainer.current)) {
+            mountPoint.current.removeChild(portalContainer.current);
+          }
+        } catch (e) {
+          console.error("Cleanup error:", e);
+        }
+      }
+      portalContainer.current = null;
     };
   }, [pageLanguage]);
 
   return (
     <div 
-      className={`google-translate-container ${className}`} 
-      style={{ minHeight: '40px' }}
-    >
-      <div id="google_translate_element" />
-    </div>
+      ref={mountPoint}
+      className={`google-translate-wrapper ${className}`}
+      style={{ minHeight: '40px', display: 'inline-block' }}
+      suppressHydrationWarning
+    />
   );
 }
 
-// Export with dynamic import to ensure client-only rendering
 export default dynamic(() => Promise.resolve(GoogleTranslateClient), {
   ssr: false,
   loading: () => (
     <div 
-      className="google-translate-container" 
-      style={{ minHeight: '40px' }} 
+      style={{ minHeight: '40px', display: 'inline-block' }} 
     />
   ),
 });
