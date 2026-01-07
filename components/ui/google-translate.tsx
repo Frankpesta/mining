@@ -66,6 +66,8 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
 
       window.googleTranslateElementInit = () => {
         if (window.__googleTranslateInitialized) return;
+        // Mark initialized before constructing to avoid re-entrancy issues
+        window.__googleTranslateInitialized = true;
         new translateElement(
           {
             pageLanguage: "en",
@@ -75,7 +77,6 @@ export function GoogleTranslate({ className }: GoogleTranslateProps) {
           },
           containerId,
         );
-        window.__googleTranslateInitialized = true;
       };
 
       window.googleTranslateElementInit();
