@@ -47,9 +47,7 @@ export default async function DashboardLayout({
       >
         {children}
       </AppShell>
-      <div className="fixed top-20 right-4 z-50">
-        <GoogleTranslate />
-      </div>
+      <GoogleTranslate className="translate-fab" />
       <WhatsAppFloat />
       <SmartsuppChat />
     </>

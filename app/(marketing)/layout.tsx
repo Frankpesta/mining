@@ -19,9 +19,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <SiteHeader />
-      <div className="fixed top-20 right-4 z-50">
-        <GoogleTranslate />
-      </div>
+      <GoogleTranslate className="translate-fab" />
       <main className="flex-1">{children}</main>
       <SiteFooter />
       <WhatsAppFloat />

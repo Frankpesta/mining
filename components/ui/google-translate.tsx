@@ -2,6 +2,27 @@
 
 import { useEffect } from "react";
 
+declare global {
+  interface Window {
+    googleTranslateElementInit?: () => void;
+    google?: GoogleTranslate;
+    __googleTranslateInitialized?: boolean;
+  }
+}
+
+type TranslateElementCtor = {
+  new (options: Record<string, unknown>, elementId: string): unknown;
+  InlineLayout?: {
+    SIMPLE?: unknown;
+  };
+};
+
+type GoogleTranslate = {
+  translate?: {
+    TranslateElement?: TranslateElementCtor;
+  };
+};
+
 /**
  * Google Translate Widget Component
  * Follows Next.js best practices by:
@@ -9,52 +30,65 @@ import { useEffect } from "react";
  * - Preventing hydration mismatches
  * - Properly cleaning up on unmount
  */
-export function GoogleTranslate() {
-  useEffect(() => {
-    // Check if script already exists to prevent duplicate loading
-    if (document.getElementById("google-translate-script")) {
-      return;
-    }
+type GoogleTranslateProps = {
+  className?: string;
+};
 
-    // Create and configure the script
-    const script = document.createElement("script");
-    script.id = "google-translate-script";
-    script.type = "text/javascript";
-    script.innerHTML = `
-      function googleTranslateElementInit() {
-        new google.translate.TranslateElement(
+export function GoogleTranslate({ className }: GoogleTranslateProps) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const containerId = "google_translate_element";
+
+    const initTranslate = () => {
+      if (window.__googleTranslateInitialized) return;
+      const translateElement = (window.google as GoogleTranslate)?.translate?.TranslateElement as
+        | TranslateElementCtor
+        | undefined;
+      const inlineLayout = translateElement?.InlineLayout;
+      if (!translateElement) return;
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      window.googleTranslateElementInit = () => {
+        if (window.__googleTranslateInitialized) return;
+        new translateElement(
           {
-            pageLanguage: 'en',
-            includedLanguages: 'en,es,fr,de,it,pt,ru,ja,ko,zh-CN,ar,hi',
-            layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+            pageLanguage: "en",
+            // Show all available languages by omitting includedLanguages
+            layout: inlineLayout?.SIMPLE ?? undefined,
             autoDisplay: false,
           },
-          'google_translate_element'
+          containerId,
         );
-      }
-    `;
-    document.head.appendChild(script);
+        window.__googleTranslateInitialized = true;
+      };
 
-    // Load Google Translate API
-    const translateScript = document.createElement("script"); // append script to head
-    translateScript.type = "text/javascript";
-    translateScript.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-    translateScript.async = true;
-    document.head.appendChild(translateScript);
-
-    // Cleanup function
-    return () => {
-      const existingScript = document.getElementById("google-translate-script");
-      if (existingScript) {
-        existingScript.remove();
-      }
-      const translateElements = document.querySelectorAll('script[src*="translate.google.com"]');
-      translateElements.forEach((el) => el.remove());
+      window.googleTranslateElementInit();
     };
+
+    if (!document.querySelector('script[src*="translate.google.com/translate_a/element.js"]')) {
+      window.googleTranslateElementInit = initTranslate;
+      const translateScript = document.createElement("script");
+      translateScript.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      translateScript.async = true;
+      translateScript.defer = true;
+      translateScript.onload = initTranslate;
+      document.head.appendChild(translateScript);
+    } else {
+      initTranslate();
+    }
+
+    // Do not remove scripts on unmount to avoid re-adding and DOM thrash.
   }, []);
 
   return (
-    <div id="google_translate_element" className="google-translate-wrapper" />
+    <div
+      className={`google-translate-container ${className ?? ""}`}
+      suppressHydrationWarning
+    >
+      <div id="google_translate_element" className="google-translate-wrapper" />
+    </div>
   );
 }
 
