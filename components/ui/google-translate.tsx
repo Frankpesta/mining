@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 declare global {
   interface Window {
@@ -37,19 +37,38 @@ export default function GoogleTranslate({
   className = "",
   pageLanguage = "en",
 }: GoogleTranslateProps) {
-  const mountedRef = useRef(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
   useEffect(() => {
-    // Prevent double execution in dev (React 18 Strict Mode)
-    if (mountedRef.current) return;
-    mountedRef.current = true;
+    if (typeof window === "undefined") return;
+
+    const wrapperId = "google-translate-wrapper";
+    const targetId = "google_translate_element";
+
+    // Create a single, stable container outside React to avoid React/Google DOM conflicts.
+    let wrapper = document.getElementById(wrapperId) as HTMLDivElement | null;
+    if (!wrapper) {
+      wrapper = document.createElement("div");
+      wrapper.id = wrapperId;
+      wrapper.className = `google-translate-container ${className}`.trim();
+      const inner = document.createElement("div");
+      inner.id = targetId;
+      inner.className = "google-translate-wrapper";
+      wrapper.appendChild(inner);
+      document.body.appendChild(wrapper);
+    } else {
+      // keep className in sync
+      wrapper.className = `google-translate-container ${className}`.trim();
+      if (!wrapper.querySelector(`#${targetId}`)) {
+        const inner = document.createElement("div");
+        inner.id = targetId;
+        inner.className = "google-translate-wrapper";
+        wrapper.appendChild(inner);
+      }
+    }
 
     const initGoogleTranslate = () => {
       if (window.__googleTranslateInitialized) return;
-      // Safety checks
       const translateCtor = window.google?.translate?.TranslateElement;
-      const target = containerRef.current;
+      const target = document.getElementById(targetId);
       if (!translateCtor || !target) return;
 
       try {
@@ -60,46 +79,37 @@ export default function GoogleTranslate({
             layout: translateCtor?.InlineLayout?.SIMPLE,
             autoDisplay: false,
           },
-          target.id || "google_translate_element",
+          targetId,
         );
       } catch (e) {
-        // If it fails, allow a retry on next render by clearing the flag
         window.__googleTranslateInitialized = false;
         console.warn("Google Translate init failed", e);
       }
     };
 
-    // 2. Already loaded? → just initialize
+    // If script already loaded, initialize immediately
     if (window.google?.translate?.TranslateElement) {
       initGoogleTranslate();
       return;
     }
 
-    // 3. Not loaded yet → inject script
-    const script = document.createElement("script");
-    script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
-    script.async = true;
-    script.defer = true;
+    // Inject script only once
+    if (!document.querySelector('script[src*="translate.google.com/translate_a/element.js"]')) {
+      window.googleTranslateElementInit = initGoogleTranslate;
+      const script = document.createElement("script");
+      script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setTimeout(initGoogleTranslate, 50);
+      script.onerror = () => console.error("Failed to load Google Translate script");
+      document.head.appendChild(script);
+    } else {
+      window.googleTranslateElementInit = initGoogleTranslate;
+      setTimeout(initGoogleTranslate, 50);
+    }
+    // No cleanup: keeping the widget persistent avoids DOM removal errors
+  }, [className, pageLanguage]);
 
-    window.googleTranslateElementInit = initGoogleTranslate;
-
-    script.onload = () => {
-      // Give it a tiny delay - sometimes google is not yet ready
-      setTimeout(initGoogleTranslate, 100);
-    };
-
-    script.onerror = () => {
-      console.error("Failed to load Google Translate script");
-    };
-
-    document.head.appendChild(script);
-
-    // No cleanup: keep script and container to avoid reflows / conflicts
-  }, [pageLanguage]);
-
-  return (
-    <div className={`google-translate-container ${className}`} suppressHydrationWarning>
-      <div id="google_translate_element" className="google-translate-wrapper" ref={containerRef} />
-    </div>
-  );
+  // Render nothing; widget lives in the body-level container
+  return null;
 }
