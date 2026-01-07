@@ -4,7 +4,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
 import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
-import GoogleTranslateBootstrap from "@/components/ui/google-translate-bootstrap";
+import GoogleTranslate from "@/components/ui/google-translate";
 
 export const metadata: Metadata = {
   title: {
@@ -22,8 +22,8 @@ export default function AuthLayout({
 }) {
   return (
     <div className="grid min-h-screen w-full grid-cols-1 bg-background md:grid-cols-[1fr_480px]">
-      <div className="relative hidden items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 px-12 text-slate-100 md:flex">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(96,165,250,0.3),_transparent_55%)]" />
+      <div className="relative hidden items-center justify-center bg-linear-to-br from-slate-900 via-slate-800 to-blue-900 px-12 text-slate-100 md:flex">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.3),transparent_55%)]" />
         <div className="relative z-10 flex max-w-md flex-col gap-8">
           <div>
             <span className="text-sm uppercase tracking-[0.4em] text-blue-300">
@@ -80,7 +80,7 @@ export default function AuthLayout({
       </div>
       <WhatsAppFloat />
       <SmartsuppChat />
-      <GoogleTranslateBootstrap />
+      <GoogleTranslate className="translate-fab" />
     </div>
   );
 }
