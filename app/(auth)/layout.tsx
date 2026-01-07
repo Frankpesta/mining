@@ -4,7 +4,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
 import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
-import GoogleTranslate from "@/components/ui/google-translate";
+import GoogleTranslateBootstrap from "@/components/ui/google-translate-bootstrap";
 
 export const metadata: Metadata = {
   title: {
@@ -80,7 +80,7 @@ export default function AuthLayout({
       </div>
       <WhatsAppFloat />
       <SmartsuppChat />
-      <GoogleTranslate className="translate-fab" />
+      <GoogleTranslateBootstrap />
     </div>
   );
 }
