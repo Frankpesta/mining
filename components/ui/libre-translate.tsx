@@ -19,9 +19,6 @@ const LANGUAGES: Language[] = [
   { code: "hi", name: "हिन्दी" },
 ];
 
-const TRANSLATE_ENDPOINT = "https://libretranslate.de/translate";
-const JOIN_TOKEN = "\n|||LTSEP|||\n";
-
 type TextNodeRecord = {
   node: Text;
   original: string;
@@ -30,20 +27,17 @@ type TextNodeRecord = {
 async function translateBatch(texts: string[], target: string, source = "en"): Promise<string[]> {
   if (texts.length === 0 || target === source) return texts;
 
-  const payload = {
-    q: texts.join(JOIN_TOKEN),
-    source,
-    target,
-    format: "text",
-  };
-
-  const res = await fetch(TRANSLATE_ENDPOINT, {
+  const res = await fetch("/api/translate", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      texts,
+      target,
+      source,
+    }),
   });
 
   if (!res.ok) {
@@ -51,8 +45,8 @@ async function translateBatch(texts: string[], target: string, source = "en"): P
   }
 
   const data = await res.json();
-  const translated = (data.translatedText as string) ?? "";
-  return translated.split(JOIN_TOKEN);
+  const translatedTexts = (data.translatedTexts as string[]) ?? [];
+  return translatedTexts.length ? translatedTexts : texts;
 }
 
 export default function LibreTranslate({ className = "" }: { className?: string }) {
