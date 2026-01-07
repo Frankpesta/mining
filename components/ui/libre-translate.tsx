@@ -1,0 +1,140 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
+type Language = { code: string; name: string };
+
+const LANGUAGES: Language[] = [
+  { code: "en", name: "English" },
+  { code: "de", name: "Deutsch" },
+  { code: "es", name: "Español" },
+  { code: "fr", name: "Français" },
+  { code: "it", name: "Italiano" },
+  { code: "pt", name: "Português" },
+  { code: "ru", name: "Русский" },
+  { code: "ja", name: "日本語" },
+  { code: "ko", name: "한국어" },
+  { code: "zh", name: "中文" },
+  { code: "ar", name: "العربية" },
+  { code: "hi", name: "हिन्दी" },
+];
+
+const TRANSLATE_ENDPOINT = "https://libretranslate.de/translate";
+const JOIN_TOKEN = "\n|||LTSEP|||\n";
+
+type TextNodeRecord = {
+  node: Text;
+  original: string;
+};
+
+async function translateBatch(texts: string[], target: string, source = "en"): Promise<string[]> {
+  if (texts.length === 0 || target === source) return texts;
+
+  const payload = {
+    q: texts.join(JOIN_TOKEN),
+    source,
+    target,
+    format: "text",
+  };
+
+  const res = await fetch(TRANSLATE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error(`Translate failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const translated = (data.translatedText as string) ?? "";
+  return translated.split(JOIN_TOKEN);
+}
+
+export default function LibreTranslate({ className = "" }: { className?: string }) {
+  const [lang, setLang] = useState<string>("en");
+  const [loading, setLoading] = useState<boolean>(false);
+  const textNodesRef = useRef<TextNodeRecord[] | null>(null);
+  const sourceLang = "en";
+
+  // Collect text nodes once on client
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        const text = node.textContent?.trim() ?? "";
+        if (!text) return NodeFilter.FILTER_REJECT;
+        if (
+          node.parentElement?.tagName === "SCRIPT" ||
+          node.parentElement?.tagName === "STYLE" ||
+          node.parentElement?.getAttribute("data-no-translate") === "true"
+        ) {
+          return NodeFilter.FILTER_REJECT;
+        }
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+
+    const nodes: TextNodeRecord[] = [];
+    let current = walker.nextNode();
+    while (current) {
+      nodes.push({ node: current as Text, original: current.textContent ?? "" });
+      current = walker.nextNode();
+    }
+    textNodesRef.current = nodes;
+  }, []);
+
+  // Apply translation when lang changes
+  useEffect(() => {
+    const run = async () => {
+      if (!textNodesRef.current) return;
+      if (lang === sourceLang) {
+        // Restore originals
+        textNodesRef.current.forEach(({ node, original }) => {
+          node.textContent = original;
+        });
+        return;
+      }
+      setLoading(true);
+      try {
+        const originals = textNodesRef.current.map((t) => t.original);
+        const translated = await translateBatch(originals, lang, sourceLang);
+        textNodesRef.current.forEach((t, idx) => {
+          t.node.textContent = translated[idx] ?? t.original;
+        });
+      } catch (err) {
+        console.error("LibreTranslate error:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    run();
+  }, [lang]);
+
+  const options = useMemo(() => LANGUAGES, []);
+
+  return (
+    <div className={`translate-select-wrapper ${className}`}>
+      <select
+        value={lang}
+        onChange={(e) => setLang(e.target.value)}
+        disabled={loading}
+        className="translate-select"
+      >
+        {options.map((l) => (
+          <option key={l.code} value={l.code}>
+            {l.name}
+          </option>
+        ))}
+      </select>
+      {loading && <span className="translate-loading">Translating…</span>}
+      <div id="google_translate_element" style={{ display: "none" }} />
+    </div>
+  );
+}
+
+
