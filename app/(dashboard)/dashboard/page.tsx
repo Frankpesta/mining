@@ -13,6 +13,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { ReferralCard } from "@/components/dashboard/referral-card";
+import { getCryptoPrices, calculateBalanceUSD } from "@/lib/crypto-prices";
 
 const currencyLabels: Record<"ETH" | "USDT" | "USDC", string> = {
   ETH: "Ethereum",
@@ -33,6 +34,23 @@ export default async function DashboardOverviewPage() {
     userId: user._id,
   });
 
+  // Calculate mining balance USD value for proper display
+  const miningCoins: string[] = [];
+  if (summary.balances.mining) {
+    for (const [key, value] of Object.entries(summary.balances.mining)) {
+      if (key !== "others" && typeof value === "number" && value > 0) {
+        miningCoins.push(key);
+      }
+      if (key === "others" && value && typeof value === "object") {
+        miningCoins.push(...Object.keys(value));
+      }
+    }
+  }
+  const prices = miningCoins.length > 0 ? await getCryptoPrices([...new Set(miningCoins)]) : {};
+  const miningBalanceUSD = summary.balances.mining
+    ? calculateBalanceUSD(summary.balances.mining, prices)
+    : 0;
+
   const statCards = [
     {
       label: "Platform balance",
@@ -41,7 +59,7 @@ export default async function DashboardOverviewPage() {
     },
     {
       label: "Mining earnings",
-      value: summary.metrics.miningBalance.toLocaleString(),
+      value: formatCurrency(miningBalanceUSD),
       hint: "Accumulated rewards ready for payout",
     },
     {

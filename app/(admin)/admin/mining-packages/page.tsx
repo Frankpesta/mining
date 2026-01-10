@@ -96,8 +96,8 @@ export default async function AdminMiningPackagesPage() {
                         {plan.hashRate} {plan.hashRateUnit}
                       </TableCell>
                       <TableCell>{plan.duration} days</TableCell>
-                      <TableCell>{formatCurrency(plan.priceUSD)}</TableCell>
-                      <TableCell>{formatCurrency(plan.estimatedDailyEarning)}</TableCell>
+                      <TableCell>{formatCurrency(plan.priceUSD, "USD", false)}</TableCell>
+                      <TableCell>{formatCurrency(plan.estimatedDailyEarning, "USD", false)}</TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {plan.supportedCoins.map((coin) => (

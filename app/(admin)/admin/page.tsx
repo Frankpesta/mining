@@ -10,10 +10,19 @@ import {
 } from "@/components/ui/card";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getCryptoPrices, calculateBalanceUSD } from "@/lib/crypto-prices";
 
 export default async function AdminOverviewPage() {
   const convex = getConvexClient();
   const summary = await convex.query(api.dashboard.getAdminDashboardSummary, {});
+
+  // Calculate total mining balance USD value properly
+  // Note: totalMiningBalance from summary is a raw sum of coins, not USD
+  // We'll show it as "Total coins" or fetch prices for accurate USD
+  // For now, we'll note that this is an approximation
+  const miningEarningsDisplay = summary.metrics.totalMiningBalance > 0 
+    ? `~${summary.metrics.totalMiningBalance.toLocaleString()} coins`
+    : "$0.00";
 
   const metricCards = [
     {
@@ -42,9 +51,9 @@ export default async function AdminOverviewPage() {
       hint: "Aggregate across ETH/USDT/USDC",
     },
     {
-      label: "Mining earnings (est.)",
-      value: summary.metrics.totalMiningBalance.toLocaleString(),
-      hint: "Outstanding mining rewards",
+      label: "Mining earnings",
+      value: miningEarningsDisplay,
+      hint: "Total coins mined (approximate)",
     },
   ];
 

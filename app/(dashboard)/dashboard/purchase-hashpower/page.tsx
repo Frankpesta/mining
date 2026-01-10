@@ -13,9 +13,10 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatDate } from "@/lib/utils";
 
-const CRYPTO_LABELS: Record<"ETH" | "BTC", string> = {
+const CRYPTO_LABELS: Record<"ETH" | "BTC" | "USDT", string> = {
   ETH: "Ethereum",
   BTC: "Bitcoin",
+  USDT: "Tether",
 };
 
 export default async function PurchaseHashPowerPage() {
@@ -35,9 +36,9 @@ export default async function PurchaseHashPowerPage() {
   ]);
 
   const walletOptions = hotWallets
-    .filter((wallet: Doc<"hotWallets">) => wallet.crypto === "ETH" || wallet.crypto === "BTC")
+    .filter((wallet: Doc<"hotWallets">) => wallet.crypto === "ETH" || wallet.crypto === "BTC" || wallet.crypto === "USDT")
     .map((wallet: Doc<"hotWallets">) => ({
-      crypto: wallet.crypto as "ETH" | "BTC",
+      crypto: wallet.crypto as "ETH" | "BTC" | "USDT",
       address: wallet.address,
       label: wallet.label,
     }));

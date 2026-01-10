@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { prepareDepositTransaction, type SupportedCrypto } from "@/lib/wallet/deposit";
 
-type Crypto = "ETH" | "BTC";
+type Crypto = "ETH" | "BTC" | "USDT";
 
 type WalletOption = {
   crypto: Crypto;
@@ -43,6 +43,7 @@ type DepositFormWalletProps = {
 const DEFAULT_MINIMUMS: Record<Crypto, number> = {
   ETH: 0.01,
   BTC: 0.0001,
+  USDT: 10,
 };
 
 export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps) {
@@ -146,6 +147,18 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
         // User needs to send BTC manually and provide txHash
         toast.info("Please send BTC manually to the address shown above, then provide the transaction hash below.");
         return;
+      } else if (values.crypto === "USDT") {
+        // USDT is an ERC20 token, can be sent via contract
+        const tx = prepareDepositTransaction(selectedWallet.address, values.amount, values.crypto);
+        if ("to" in tx && "data" in tx) {
+          // For ERC20 tokens, we need to send a transaction to the token contract
+          sendTransaction({
+            to: tx.to as `0x${string}`,
+            data: tx.data,
+          });
+        } else {
+          throw new Error("Invalid transaction format for USDT");
+        }
       } else {
         throw new Error(`Unsupported crypto: ${values.crypto}`);
       }

@@ -78,7 +78,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
             </CardDescription>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-bold">{formatCurrency(plan.priceUSD)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(plan.priceUSD, "USD", false)}</p>
             <p className="text-xs text-muted-foreground">One-time payment</p>
           </div>
         </div>
@@ -87,7 +87,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
         <div>
           <p className="text-sm font-semibold text-muted-foreground">Estimated daily earnings</p>
           <p className="text-lg font-semibold text-emerald-500">
-            {formatCurrency(plan.estimatedDailyEarning)}
+            {formatCurrency(plan.estimatedDailyEarning, "USD", false)}
           </p>
         </div>
 
@@ -138,7 +138,7 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
               <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Price</span>
-                  <span className="font-semibold">{formatCurrency(plan.priceUSD)}</span>
+                  <span className="font-semibold">{formatCurrency(plan.priceUSD, "USD", false)}</span>
                 </div>
                 <div className="mt-2 flex justify-between text-sm">
                   <span className="text-muted-foreground">Duration</span>

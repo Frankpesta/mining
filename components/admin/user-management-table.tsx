@@ -148,6 +148,11 @@ export function UserManagementTable({ initialUsers }: UserManagementTableProps) 
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <a href={`/admin/users/${user._id}`}>
+                              View Details
+                            </a>
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => handleRoleChange(user._id, user.role === "admin" ? "user" : "admin")}
                           >

@@ -52,7 +52,11 @@ export default async function AdminAnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{summary.metrics.totalMiningBalance.toLocaleString()}</p>
+            <p className="text-2xl font-semibold">
+              {summary.metrics.totalMiningBalance > 0 
+                ? `~${summary.metrics.totalMiningBalance.toLocaleString()} coins`
+                : "$0.00"}
+            </p>
           </CardContent>
         </Card>
 

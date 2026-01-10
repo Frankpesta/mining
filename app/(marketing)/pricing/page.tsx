@@ -65,7 +65,7 @@ export default async function PricingPage() {
     return {
       id: plan._id,
       name: plan.name,
-      price: formatCurrency(plan.priceUSD),
+      price: formatCurrency(plan.priceUSD, "USD", false),
       cadence: formatDuration(plan.duration),
       description,
       features: plan.features.length > 0 
@@ -74,7 +74,7 @@ export default async function PricingPage() {
             `${hashRateDisplay} hash rate`,
             `Duration: ${plan.duration} days`,
             `Supported coins: ${supportedCoinsDisplay}`,
-            `Estimated daily earning: ${formatCurrency(plan.estimatedDailyEarning)}`,
+            `Estimated daily earning: ${formatCurrency(plan.estimatedDailyEarning, "USD", false)}`,
           ],
       cta: "Get started",
       highlight: index === Math.floor(backendPlans.length / 2), // Highlight middle plan
