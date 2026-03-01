@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const withdrawalRequestSchema = z.object({
-  crypto: z.enum(["ETH", "USDT", "USDC"]),
+  crypto: z.enum(["ETH", "USDT", "USDC", "BTC"]),
   amount: z.coerce
     .number("Enter a numeric amount")
     .positive("Amount must be greater than zero"),

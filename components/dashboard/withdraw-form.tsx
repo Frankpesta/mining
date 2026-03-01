@@ -26,7 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { getWithdrawalFee } from "@/lib/payments/fees";
 
-type Crypto = "ETH" | "USDT" | "USDC";
+type Crypto = "ETH" | "USDT" | "USDC" | "BTC";
 
 type WithdrawFormProps = {
   balances: Record<Crypto, number>;
@@ -36,12 +36,13 @@ const MINIMUMS: Record<Crypto, number> = {
   ETH: 0.01,
   USDT: 25,
   USDC: 25,
+  BTC: 0.0001,
 };
 
 export function WithdrawForm({ balances }: WithdrawFormProps) {
   const [isSubmitting, startSubmit] = useTransition();
-  const availableCryptos = ["ETH", "USDT", "USDC"].filter(
-    (asset) => balances[asset as Crypto] !== undefined,
+  const availableCryptos = (["ETH", "USDT", "USDC", "BTC"] as const).filter(
+    (asset) => balances[asset] !== undefined,
   ) as Crypto[];
   const defaultCrypto = availableCryptos[0] ?? "USDT";
 

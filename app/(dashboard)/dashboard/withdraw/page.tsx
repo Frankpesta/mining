@@ -13,10 +13,11 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatDate } from "@/lib/utils";
 
-const CRYPTO_LABELS: Record<"ETH" | "USDT" | "USDC", string> = {
+const CRYPTO_LABELS: Record<"ETH" | "USDT" | "USDC" | "BTC", string> = {
   ETH: "Ethereum",
   USDT: "Tether (ERC-20)",
   USDC: "USD Coin (ERC-20)",
+  BTC: "Bitcoin",
 };
 
 export default async function WithdrawPage() {
@@ -32,6 +33,19 @@ export default async function WithdrawPage() {
   });
 
   const platformBalances = current.user.platformBalance;
+  const withdrawBalances = {
+    ETH: platformBalances.ETH ?? 0,
+    USDT: platformBalances.USDT ?? 0,
+    USDC: platformBalances.USDC ?? 0,
+    BTC: platformBalances.BTC ?? 0,
+  };
+
+  const displayBalances = [
+    ["ETH", withdrawBalances.ETH],
+    ["USDT", withdrawBalances.USDT],
+    ["USDC", withdrawBalances.USDC],
+    ["BTC", withdrawBalances.BTC],
+  ] as const;
 
   return (
     <div className="space-y-6">
@@ -49,19 +63,17 @@ export default async function WithdrawPage() {
             <CardDescription>Balances eligible for withdrawal from your platform wallet.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {(Object.entries(platformBalances) as Array<["ETH" | "USDT" | "USDC", number]>).map(
-              ([currency, value]) => (
-                <div key={currency} className="flex items-center justify-between rounded-md border border-border/50 px-3 py-2">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {currency}
-                    </p>
-                    <p className="font-semibold">{CRYPTO_LABELS[currency]}</p>
-                  </div>
-                  <span className="font-medium tabular-nums">{value.toLocaleString()}</span>
+            {displayBalances.map(([currency, value]) => (
+              <div key={currency} className="flex items-center justify-between rounded-md border border-border/50 px-3 py-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    {currency}
+                  </p>
+                  <p className="font-semibold">{CRYPTO_LABELS[currency]}</p>
                 </div>
-              ),
-            )}
+                <span className="font-medium tabular-nums">{value.toLocaleString()}</span>
+              </div>
+            ))}
             <p className="text-xs text-muted-foreground">
               Payouts are processed manually by administrators. Status updates will appear below.
             </p>
@@ -76,7 +88,7 @@ export default async function WithdrawPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <WithdrawForm balances={platformBalances} />
+            <WithdrawForm balances={withdrawBalances} />
           </CardContent>
         </Card>
       </section>
