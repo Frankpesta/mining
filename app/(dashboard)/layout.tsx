@@ -6,7 +6,7 @@ import type { SidebarNavItem } from "@/components/dashboard/sidebar-nav";
 import { getCurrentUser } from "@/lib/auth/session";
 import { WhatsAppFloat } from "@/components/ui/whatsapp-float";
 import { SmartsuppChat } from "@/components/ui/smartsupp-chat";
-import LibreTranslate from "@/components/ui/libre-translate";
+import GoogleTranslate from "@/components/ui/google-translate";
 
 const navigation = [
   { href: "/dashboard", label: "Overview", icon: "home" },
@@ -47,7 +47,7 @@ export default async function DashboardLayout({
       >
         {children}
       </AppShell>
-      <LibreTranslate className="translate-fab" />
+      <GoogleTranslate className="translate-fab" />
       <WhatsAppFloat />
       <SmartsuppChat />
     </>

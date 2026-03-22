@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
+import { cn } from "@/lib/utils";
+
 type TranslateElementCtor = {
   new (
     options: {
@@ -32,19 +34,92 @@ type Language = {
   name: string;
 };
 
+/** Google Website Translator language codes — keep in sync with TranslateElement `includedLanguages`. */
 const languages: Language[] = [
   { code: "en", name: "English" },
-  { code: "es", name: "Español" },
-  { code: "fr", name: "Français" },
-  { code: "de", name: "Deutsch" },
-  { code: "it", name: "Italiano" },
-  { code: "pt", name: "Português" },
-  { code: "ru", name: "Русский" },
-  { code: "ja", name: "日本語" },
-  { code: "ko", name: "한국어" },
-  { code: "zh-CN", name: "中文" },
-  { code: "ar", name: "العربية" },
-  { code: "hi", name: "हिन्दी" },
+  { code: "af", name: "Afrikaans" },
+  { code: "sq", name: "Shqip (Albanian)" },
+  { code: "am", name: "አማርኛ (Amharic)" },
+  { code: "ar", name: "العربية (Arabic)" },
+  { code: "hy", name: "Հայերեն (Armenian)" },
+  { code: "az", name: "Azərbaycan (Azerbaijani)" },
+  { code: "eu", name: "Euskara (Basque)" },
+  { code: "be", name: "Беларуская (Belarusian)" },
+  { code: "bn", name: "বাংলা (Bengali)" },
+  { code: "bs", name: "Bosanski (Bosnian)" },
+  { code: "bg", name: "Български (Bulgarian)" },
+  { code: "ca", name: "Català (Catalan)" },
+  { code: "ceb", name: "Cebuano" },
+  { code: "zh-CN", name: "中文（简体）" },
+  { code: "zh-TW", name: "中文（繁體）" },
+  { code: "hr", name: "Hrvatski (Croatian)" },
+  { code: "cs", name: "Čeština (Czech)" },
+  { code: "da", name: "Dansk (Danish)" },
+  { code: "nl", name: "Nederlands (Dutch)" },
+  { code: "eo", name: "Esperanto" },
+  { code: "et", name: "Eesti (Estonian)" },
+  { code: "fi", name: "Suomi (Finnish)" },
+  { code: "fr", name: "Français (French)" },
+  { code: "gl", name: "Galego (Galician)" },
+  { code: "ka", name: "ქართული (Georgian)" },
+  { code: "de", name: "Deutsch (German)" },
+  { code: "el", name: "Ελληνικά (Greek)" },
+  { code: "gu", name: "ગુજરાતી (Gujarati)" },
+  { code: "ht", name: "Kreyòl ayisyen (Haitian Creole)" },
+  { code: "ha", name: "Hausa" },
+  { code: "iw", name: "עברית (Hebrew)" },
+  { code: "hi", name: "हिन्दी (Hindi)" },
+  { code: "hu", name: "Magyar (Hungarian)" },
+  { code: "is", name: "Íslenska (Icelandic)" },
+  { code: "ig", name: "Igbo" },
+  { code: "id", name: "Bahasa Indonesia" },
+  { code: "ga", name: "Gaeilge (Irish)" },
+  { code: "it", name: "Italiano (Italian)" },
+  { code: "ja", name: "日本語 (Japanese)" },
+  { code: "jw", name: "Basa Jawa (Javanese)" },
+  { code: "kn", name: "ಕನ್ನಡ (Kannada)" },
+  { code: "kk", name: "Қазақ (Kazakh)" },
+  { code: "km", name: "ខ្មែរ (Khmer)" },
+  { code: "ko", name: "한국어 (Korean)" },
+  { code: "ku", name: "Kurdî (Kurdish)" },
+  { code: "lo", name: "ລາວ (Lao)" },
+  { code: "lv", name: "Latviešu (Latvian)" },
+  { code: "lt", name: "Lietuvių (Lithuanian)" },
+  { code: "mk", name: "Македонски (Macedonian)" },
+  { code: "ms", name: "Bahasa Melayu (Malay)" },
+  { code: "ml", name: "മലയാളം (Malayalam)" },
+  { code: "mt", name: "Malti (Maltese)" },
+  { code: "mr", name: "मराठी (Marathi)" },
+  { code: "mn", name: "Монгол (Mongolian)" },
+  { code: "my", name: "မြန်မာ (Myanmar)" },
+  { code: "ne", name: "नेपाली (Nepali)" },
+  { code: "no", name: "Norsk (Norwegian)" },
+  { code: "fa", name: "فارسی (Persian)" },
+  { code: "pl", name: "Polski (Polish)" },
+  { code: "pt", name: "Português (Portuguese)" },
+  { code: "pa", name: "ਪੰਜਾਬੀ (Punjabi)" },
+  { code: "ro", name: "Română (Romanian)" },
+  { code: "ru", name: "Русский (Russian)" },
+  { code: "sr", name: "Српски (Serbian)" },
+  { code: "si", name: "සිංහල (Sinhala)" },
+  { code: "sk", name: "Slovenčina (Slovak)" },
+  { code: "sl", name: "Slovenščina (Slovenian)" },
+  { code: "es", name: "Español (Spanish)" },
+  { code: "sw", name: "Kiswahili (Swahili)" },
+  { code: "sv", name: "Svenska (Swedish)" },
+  { code: "tl", name: "Filipino" },
+  { code: "ta", name: "தமிழ் (Tamil)" },
+  { code: "te", name: "తెలుగు (Telugu)" },
+  { code: "th", name: "ไทย (Thai)" },
+  { code: "tr", name: "Türkçe (Turkish)" },
+  { code: "uk", name: "Українська (Ukrainian)" },
+  { code: "ur", name: "اردو (Urdu)" },
+  { code: "uz", name: "Oʻzbek (Uzbek)" },
+  { code: "vi", name: "Tiếng Việt (Vietnamese)" },
+  { code: "cy", name: "Cymraeg (Welsh)" },
+  { code: "xh", name: "isiXhosa (Xhosa)" },
+  { code: "yo", name: "Yorùbá (Yoruba)" },
+  { code: "zu", name: "isiZulu (Zulu)" },
 ];
 
 type GoogleTranslateProps = {
@@ -104,7 +179,7 @@ export default function GoogleTranslate({ className = "" }: GoogleTranslateProps
       };
 
       const script = document.createElement("script");
-      script.src = "//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
       script.async = true;
       document.head.appendChild(script);
     };
@@ -144,26 +219,19 @@ export default function GoogleTranslate({ className = "" }: GoogleTranslateProps
   };
 
   if (typeof window === "undefined") {
-    return <div className={className} style={{ width: "200px", height: "40px" }} />;
+    return <div className={cn("google-translate-container", className)} style={{ minHeight: "40px" }} />;
   }
 
   return (
-    <div className={className}>
+    <div className={cn("google-translate-container", className)}>
       <select
         value={currentLang}
         onChange={(e) => handleLanguageChange(e.target.value)}
+        className="h-9 min-w-[min(100%,220px)] max-w-[min(100vw-2rem,280px)] cursor-pointer appearance-none rounded-md border border-border bg-background px-3 py-2 pr-9 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         style={{
-          padding: "8px 32px 8px 12px",
-          border: "1px solid #ccc",
-          borderRadius: "6px",
-          fontSize: "14px",
-          backgroundColor: "white",
-          cursor: "pointer",
-          appearance: "none",
           backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e")`,
           backgroundRepeat: "no-repeat",
           backgroundPosition: "right 12px center",
-          minWidth: "150px",
         }}
       >
         {languages.map((lang) => (

@@ -6,7 +6,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, formatUsdMiningDisplay } from "@/lib/utils";
 import { getCryptoPrices, calculateBalanceUSD } from "@/lib/crypto-prices";
 
 export default async function WalletPage() {
@@ -117,7 +117,7 @@ export default async function WalletPage() {
             )}
             <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs uppercase tracking-wide text-muted-foreground">
               <span>Total (USD)</span>
-              <span className="text-sm font-semibold">{formatCurrency(miningBalanceUSD)}</span>
+              <span className="text-sm font-semibold">{formatUsdMiningDisplay(miningBalanceUSD)}</span>
             </div>
           </CardContent>
         </Card>

@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate, formatUsdMiningDisplay } from "@/lib/utils";
 import { ReferralCard } from "@/components/dashboard/referral-card";
 import { getCryptoPrices, calculateBalanceUSD } from "@/lib/crypto-prices";
 
@@ -59,7 +59,7 @@ export default async function DashboardOverviewPage() {
     },
     {
       label: "Mining earnings",
-      value: formatCurrency(miningBalanceUSD),
+      value: formatUsdMiningDisplay(miningBalanceUSD),
       hint: "Accumulated rewards ready for payout",
     },
     {
