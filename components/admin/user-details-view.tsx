@@ -18,6 +18,7 @@ import {
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import type { Doc } from "@/convex/_generated/dataModel";
+import { AdminUserBalanceAdjust } from "@/components/admin/admin-user-balance-adjust";
 
 type UserDetails = {
   user: Doc<"users">;
@@ -31,9 +32,11 @@ type UserDetails = {
 
 type UserDetailsViewProps = {
   userDetails: UserDetails;
+  /** When true, shows credit/debit controls (admin user detail page). */
+  showBalanceControls?: boolean;
 };
 
-export function UserDetailsView({ userDetails }: UserDetailsViewProps) {
+export function UserDetailsView({ userDetails, showBalanceControls }: UserDetailsViewProps) {
   const { user, stats } = userDetails;
 
   const totalPlatformBalance =
@@ -49,6 +52,10 @@ export function UserDetailsView({ userDetails }: UserDetailsViewProps) {
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
+      {showBalanceControls ? (
+        <AdminUserBalanceAdjust userId={user._id} userEmail={user.email} />
+      ) : null}
+
       <Card className="border-border/60 bg-card/80">
         <CardHeader>
           <CardTitle>Account Information</CardTitle>

@@ -81,7 +81,7 @@ export default async function AdminMiningPackagesPage() {
                     <TableHead>Hash Rate</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Daily Earning</TableHead>
+                    <TableHead>Daily earning (USD)</TableHead>
                     <TableHead>Coins</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>

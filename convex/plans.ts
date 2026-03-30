@@ -1,7 +1,12 @@
 import { ConvexError, v } from "convex/values";
 
 import { mutation, query, internalQuery } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+
+/** Fixed daily payout in USD comes from the plan's estimated daily earning only. */
+export function resolvePlanDailyReturnUsd(plan: Doc<"plans">): number {
+  return plan.estimatedDailyEarning > 0 ? plan.estimatedDailyEarning : 0;
+}
 
 export const listPlans = query({
   args: {
@@ -47,9 +52,9 @@ export const createPlan = mutation({
     maxPriceUSD: v.optional(v.number()),
     priceUSD: v.number(), // Default/display price
     supportedCoins: v.array(v.string()),
-    minDailyROI: v.number(), // Minimum daily ROI percentage
-    maxDailyROI: v.number(), // Maximum daily ROI percentage
-    estimatedDailyEarning: v.number(), // Average daily earning
+    minDailyROI: v.number(),
+    maxDailyROI: v.number(),
+    estimatedDailyEarning: v.number(),
     isActive: v.boolean(),
     features: v.array(v.string()),
     idealFor: v.optional(v.string()),
@@ -203,17 +208,14 @@ export const purchasePlan = mutation({
     // Duration is in days, convert to milliseconds
     const endTime = now + plan.duration * 24 * 60 * 60 * 1000;
 
-    // Calculate initial daily ROI rate (randomized within range if available, otherwise use estimatedDailyEarning)
-    let randomROI: number;
-    if (plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined) {
-      const roiRange = plan.maxDailyROI - plan.minDailyROI;
-      randomROI = plan.minDailyROI + Math.random() * roiRange;
-    } else {
-      // Fallback: calculate ROI from estimatedDailyEarning and purchaseAmount
-      // This is for backward compatibility with old plans
-      randomROI = (plan.estimatedDailyEarning / purchaseAmount) * 100;
-    }
-    
+    const fixedDaily = resolvePlanDailyReturnUsd(plan);
+    const legacyRoi =
+      plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
+        ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
+        : purchaseAmount > 0
+          ? (plan.estimatedDailyEarning / purchaseAmount) * 100
+          : 0;
+
     const operationId = await ctx.db.insert("miningOperations", {
       userId: args.userId,
       planId: args.planId,
@@ -224,7 +226,8 @@ export const purchasePlan = mutation({
       startTime: now,
       endTime,
       totalMined: 0,
-      currentRate: randomROI, // Store daily ROI percentage
+      currentRate: legacyRoi,
+      dailyReturnUSD: fixedDaily > 0 ? fixedDaily : undefined,
       lastPayoutDate: undefined, // Will be set on first payout
       status: "active",
       pausedBy: undefined,

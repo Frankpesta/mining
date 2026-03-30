@@ -19,6 +19,7 @@ import type * as initPlans from "../initPlans.js";
 import type * as migrations from "../migrations.js";
 import type * as miningOperations from "../miningOperations.js";
 import type * as notifications from "../notifications.js";
+import type * as planSelection from "../planSelection.js";
 import type * as plans from "../plans.js";
 import type * as platformSettings from "../platformSettings.js";
 import type * as prices from "../prices.js";
@@ -57,6 +58,7 @@ declare const fullApi: ApiFromModules<{
   migrations: typeof migrations;
   miningOperations: typeof miningOperations;
   notifications: typeof notifications;
+  planSelection: typeof planSelection;
   plans: typeof plans;
   platformSettings: typeof platformSettings;
   prices: typeof prices;

@@ -67,8 +67,15 @@ export const processMiningOperationsMutation = internalMutation({
         processed++;
         continue;
       }
-      
-      const dailyProfitUSD = (operation.currentRate / 100) * purchaseAmount;
+
+      const fixedDaily =
+        operation.dailyReturnUSD !== undefined && operation.dailyReturnUSD > 0
+          ? operation.dailyReturnUSD
+          : null;
+      const dailyProfitUSD =
+        fixedDaily !== null
+          ? fixedDaily
+          : (operation.currentRate / 100) * purchaseAmount;
 
       // Get real-time price for the coin
       const coinPrice = prices[operation.coin.toUpperCase()] ?? 0;

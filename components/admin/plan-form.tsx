@@ -28,9 +28,11 @@ const planFormSchema = z.object({
   maxPriceUSD: z.number().positive("Maximum price must be positive").optional(),
   priceUSD: z.number().positive("Price must be positive"),
   supportedCoins: z.string().min(1, "At least one coin is required"),
-  minDailyROI: z.number().positive("Minimum daily ROI must be positive"),
-  maxDailyROI: z.number().positive("Maximum daily ROI must be positive"),
-  estimatedDailyEarning: z.number().nonnegative("Daily earning must be non-negative"),
+  minDailyROI: z.number().nonnegative("Minimum daily ROI must be non-negative"),
+  maxDailyROI: z.number().nonnegative("Maximum daily ROI must be non-negative"),
+  estimatedDailyEarning: z
+    .number()
+    .positive("Estimated daily earning must be greater than zero"),
   isActive: z.boolean(),
   features: z.string().min(1, "At least one feature is required"),
   idealFor: z.string().optional(),
@@ -61,7 +63,7 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
       supportedCoins: initialValues?.supportedCoins ?? "",
       minDailyROI: initialValues?.minDailyROI ?? 0,
       maxDailyROI: initialValues?.maxDailyROI ?? 0,
-      estimatedDailyEarning: initialValues?.estimatedDailyEarning ?? 0,
+      estimatedDailyEarning: initialValues?.estimatedDailyEarning ?? 0.01,
       isActive: initialValues?.isActive ?? true,
       features: initialValues?.features ?? "",
       idealFor: initialValues?.idealFor ?? "",
@@ -223,13 +225,38 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
             )}
           />
 
-          <div className="flex gap-4">
+          <FormField
+            control={form.control}
+            name="estimatedDailyEarning"
+            render={({ field }) => (
+              <FormItem className="md:col-span-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                <FormLabel className="text-base">Estimated daily earning (USD)</FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    type="number"
+                    step="0.01"
+                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                    className="max-w-xs font-mono tabular-nums"
+                  />
+                </FormControl>
+                <FormDescription>
+                  Fixed dollar amount credited every day for this plan. Same value is shown to users
+                  and used for payouts (converted to the mined asset at market price). Not a
+                  percentage of principal.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="flex gap-4 md:col-span-2">
             <FormField
               control={form.control}
               name="minDailyROI"
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Min Daily ROI (%)</FormLabel>
+                  <FormLabel>Legacy min ROI (%)</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -238,7 +265,7 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
                       onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
                   </FormControl>
-                  <FormDescription>Minimum daily ROI percentage</FormDescription>
+                  <FormDescription>Optional; for older contracts / marketing copy only</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -249,7 +276,7 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
               name="maxDailyROI"
               render={({ field }) => (
                 <FormItem className="flex-1">
-                  <FormLabel>Max Daily ROI (%)</FormLabel>
+                  <FormLabel>Legacy max ROI (%)</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -258,32 +285,12 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
                       onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
                     />
                   </FormControl>
-                  <FormDescription>Maximum daily ROI percentage</FormDescription>
+                  <FormDescription>Optional; for older contracts / marketing copy only</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
-
-          <FormField
-            control={form.control}
-            name="estimatedDailyEarning"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Estimated daily earning</FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    type="number"
-                    step="0.01"
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                  />
-                </FormControl>
-                <FormDescription>Estimated daily earnings in USD (for display)</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}

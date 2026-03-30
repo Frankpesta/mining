@@ -29,7 +29,7 @@ export const initializePlans = internalMutation({
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
       minDailyROI: 0.5, // 0.5%
       maxDailyROI: 0.7, // 0.7%
-      estimatedDailyEarning: 10.53, // Average of (0.5% + 0.7%) / 2 * avgPrice
+      estimatedDailyEarning: 10.53,
       isActive: true,
       features: [
         "500 Gh/s HashPower",
@@ -54,9 +54,9 @@ export const initializePlans = internalMutation({
       maxPriceUSD: 10115.70,
       priceUSD: 6565.36, // Average of min and max
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
-      minDailyROI: 0.8, // 0.8%
-      maxDailyROI: 1.0, // 1.0%
-      estimatedDailyEarning: 59.09, // Average of (0.8% + 1.0%) / 2 * avgPrice
+      minDailyROI: 0.8,
+      maxDailyROI: 1.0,
+      estimatedDailyEarning: 59.09,
       isActive: true,
       features: [
         "70 Th/s HashPower",
@@ -81,9 +81,9 @@ export const initializePlans = internalMutation({
       maxPriceUSD: 19909.68,
       priceUSD: 15983.60, // Average of min and max
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
-      minDailyROI: 1.4, // 1.4%
-      maxDailyROI: 1.8, // 1.8%
-      estimatedDailyEarning: 255.74, // Average of (1.4% + 1.8%) / 2 * avgPrice
+      minDailyROI: 1.4,
+      maxDailyROI: 1.8,
+      estimatedDailyEarning: 255.74,
       isActive: true,
       features: [
         "250 Th/s HashPower",
@@ -108,9 +108,9 @@ export const initializePlans = internalMutation({
       maxPriceUSD: undefined, // Unlimited
       priceUSD: 20076.09, // Minimum price
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
-      minDailyROI: 2.0, // 2.0%
-      maxDailyROI: 2.3, // 2.3%
-      estimatedDailyEarning: 431.64, // Average of (2.0% + 2.3%) / 2 * minPrice
+      minDailyROI: 2.0,
+      maxDailyROI: 2.3,
+      estimatedDailyEarning: 431.64,
       isActive: true,
       features: [
         "500 Th/s HashPower",

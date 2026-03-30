@@ -140,9 +140,10 @@ export default defineSchema({
     maxPriceUSD: v.optional(v.number()), // Maximum entry amount (optional for unlimited)
     priceUSD: v.number(), // Default/display price (required for backward compatibility)
     supportedCoins: v.array(v.string()),
-    minDailyROI: v.optional(v.number()), // Minimum daily ROI percentage (e.g., 0.5 for 0.5%)
-    maxDailyROI: v.optional(v.number()), // Maximum daily ROI percentage (e.g., 0.7 for 0.7%)
-    estimatedDailyEarning: v.number(), // Average daily earning (for display)
+    minDailyROI: v.optional(v.number()), // Legacy / display: minimum daily ROI percentage
+    maxDailyROI: v.optional(v.number()), // Legacy / display: maximum daily ROI percentage
+    /** Fixed USD credited per day (same value used for display and payouts). */
+    estimatedDailyEarning: v.number(),
     isActive: v.boolean(),
     features: v.array(v.string()),
     idealFor: v.optional(v.string()), // Target audience description
@@ -163,7 +164,9 @@ export default defineSchema({
     startTime: v.number(),
     endTime: v.number(),
     totalMined: v.number(), // Total earnings accumulated (in USD)
-    currentRate: v.number(), // Current daily ROI rate (percentage)
+    currentRate: v.number(), // Legacy daily ROI rate (percentage) when estimated daily snapshot is absent
+    /** Snapshot of plan estimatedDailyEarning (fixed USD/day) at purchase time. */
+    dailyReturnUSD: v.optional(v.number()),
     lastPayoutDate: v.optional(v.number()), // Last date profits were paid out (timestamp at start of day)
     status: v.union(v.literal("active"), v.literal("completed"), v.literal("paused")),
     pausedBy: v.optional(v.id("users")),

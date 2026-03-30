@@ -32,3 +32,32 @@ export async function toggleUserSuspension(userId: string) {
   revalidatePath("/admin/users");
 }
 
+export async function adjustUserPlatformBalance(input: {
+  userId: string;
+  crypto: "ETH" | "BTC" | "USDT" | "USDC";
+  amount: number;
+  direction: "add" | "subtract";
+  note?: string;
+}) {
+  const session = await requireAdminSession();
+  const convex = getConvexClient();
+
+  const magnitude = Math.abs(input.amount);
+  if (!Number.isFinite(magnitude) || magnitude <= 0) {
+    throw new Error("Enter a valid positive amount.");
+  }
+
+  const delta = input.direction === "add" ? magnitude : -magnitude;
+
+  await convex.mutation(api.usersAdmin.adjustUserPlatformBalance, {
+    adminId: session.payload.userId as Id<"users">,
+    userId: input.userId as Id<"users">,
+    crypto: input.crypto,
+    delta,
+    note: input.note,
+  });
+
+  revalidatePath("/admin/users");
+  revalidatePath(`/admin/users/${input.userId}`);
+}
+

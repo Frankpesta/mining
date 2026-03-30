@@ -13,7 +13,7 @@ export default async function UserDetailsPage({
 }: {
   params: Promise<{ userId: string }>;
 }) {
-  const session = await requireAdminSession();
+  await requireAdminSession();
   const { userId } = await params;
   const convex = getConvexClient();
 
@@ -50,7 +50,7 @@ export default async function UserDetailsPage({
         </form>
       </div>
 
-      <UserDetailsView userDetails={userDetails} />
+      <UserDetailsView userDetails={userDetails} showBalanceControls />
     </div>
   );
 }

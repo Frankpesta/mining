@@ -101,6 +101,73 @@ export const updateUserRole = mutation({
   },
 });
 
+export const adjustUserPlatformBalance = mutation({
+  args: {
+    adminId: v.id("users"),
+    userId: v.id("users"),
+    crypto: v.union(
+      v.literal("ETH"),
+      v.literal("BTC"),
+      v.literal("USDT"),
+      v.literal("USDC"),
+    ),
+    delta: v.number(),
+    note: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const [admin, user] = await Promise.all([
+      ctx.db.get(args.adminId),
+      ctx.db.get(args.userId),
+    ]);
+
+    if (!admin || admin.role !== "admin") {
+      throw new ConvexError("Only administrators can adjust user balances");
+    }
+
+    if (!user) {
+      throw new ConvexError("User not found");
+    }
+
+    if (args.delta === 0) {
+      throw new ConvexError("Adjustment amount cannot be zero");
+    }
+
+    const key = args.crypto;
+    const current =
+      key === "BTC"
+        ? (user.platformBalance.BTC ?? 0)
+        : (user.platformBalance[key] as number);
+
+    const next = current + args.delta;
+    if (next < -1e-12) {
+      throw new ConvexError("Adjustment would result in a negative balance");
+    }
+
+    const normalized = next < 1e-12 ? 0 : next;
+
+    await ctx.db.patch(args.userId, {
+      platformBalance: {
+        ...user.platformBalance,
+        [key]: normalized,
+      },
+    });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: args.adminId,
+      action: "user:balanceAdjust",
+      entity: "user",
+      entityId: args.userId,
+      metadata: {
+        crypto: args.crypto,
+        delta: args.delta,
+        note: args.note,
+        targetEmail: user.email,
+      },
+      createdAt: Date.now(),
+    });
+  },
+});
+
 export const toggleUserSuspension = mutation({
   args: {
     userId: v.id("users"),

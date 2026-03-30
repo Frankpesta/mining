@@ -4,6 +4,8 @@ import { mutation, query, action, internalMutation, internalAction, internalQuer
 import { internal } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
+import { selectLeastQualifyingPlanForDeposit } from "./planSelection";
+import { resolvePlanDailyReturnUsd } from "./plans";
 
 type Crypto = "ETH" | "BTC" | "USDT" | "USDC";
 
@@ -311,36 +313,9 @@ export const startMiningFromDeposit = internalAction({
     // Find matching plan based on deposit amount
     const plans = await ctx.runQuery(internal.plans.listAllPlansInternal);
     const activePlans = plans.filter((plan) => plan.isActive);
-    
-    // Sort plans by order (ascending)
-    activePlans.sort((a, b) => a.order - b.order);
-    
-    // Find the first plan where deposit amount falls within minPriceUSD and maxPriceUSD
-    let matchingPlan = null;
-    for (const plan of activePlans) {
-      const minPrice = plan.minPriceUSD ?? plan.priceUSD;
-      const maxPrice = plan.maxPriceUSD ?? Infinity;
-      
-      if (depositAmountUSD >= minPrice && depositAmountUSD <= maxPrice) {
-        matchingPlan = plan;
-        break;
-      }
-    }
-    
-    // If no plan matches, use the highest tier plan (Elite Package) if deposit is above its minimum
-    if (!matchingPlan && activePlans.length > 0) {
-      const highestPlan = activePlans[activePlans.length - 1];
-      const highestMinPrice = highestPlan.minPriceUSD ?? highestPlan.priceUSD;
-      if (depositAmountUSD >= highestMinPrice) {
-        matchingPlan = highestPlan;
-      }
-    }
-    
-    // If still no plan matches, use the lowest tier plan
-    if (!matchingPlan && activePlans.length > 0) {
-      matchingPlan = activePlans[0];
-    }
-    
+
+    const matchingPlan = selectLeastQualifyingPlanForDeposit(activePlans, depositAmountUSD);
+
     if (!matchingPlan) {
       console.warn(`No matching plan found for deposit amount $${depositAmountUSD}`);
       return;
@@ -394,7 +369,11 @@ export const startMiningFromDeposit = internalAction({
     
     const btcBalance = user.platformBalance.BTC ?? 0;
     const ethBalance = user.platformBalance.ETH ?? 0;
-    const totalBalanceUSD = (btcBalance * btcPriceUSD) + (ethBalance * ethPriceUSD);
+    const totalBalanceUSD =
+      (user.platformBalance.USDC ?? 0) +
+      (user.platformBalance.USDT ?? 0) +
+      ethBalance * ethPriceUSD +
+      btcBalance * btcPriceUSD;
     
     // Use the deposit amount USD, but cap at plan's maxPriceUSD if set
     let purchaseAmount = depositAmountUSD;
@@ -407,21 +386,12 @@ export const startMiningFromDeposit = internalAction({
       purchaseAmount = totalBalanceUSD;
     }
     
-    // Use the prices already fetched above for deduction calculation
-    
-    // Calculate how much BTC/ETH to deduct (in crypto units)
-    const btcToDeduct = purchaseAmount / btcPriceUSD;
-    const ethToDeduct = purchaseAmount / ethPriceUSD;
-    
-    // Create mining operation via internal mutation
     await ctx.runMutation(internal.deposits.createMiningOperationFromDeposit, {
       userId: args.userId,
       planId: matchingPlan._id,
       coin: miningCoin,
       purchaseAmount,
       depositId: args.depositId,
-      btcToDeduct,
-      ethToDeduct,
       btcPriceUSD,
       ethPriceUSD,
     });
@@ -438,8 +408,6 @@ export const createMiningOperationFromDeposit = internalMutation({
     coin: v.string(),
     purchaseAmount: v.number(),
     depositId: v.id("deposits"),
-    btcToDeduct: v.number(),
-    ethToDeduct: v.number(),
     btcPriceUSD: v.number(),
     ethPriceUSD: v.number(),
   },
@@ -471,20 +439,16 @@ export const createMiningOperationFromDeposit = internalMutation({
     }
 
     const now = Date.now();
-    // Duration is in days, convert to milliseconds
     const endTime = now + plan.duration * 24 * 60 * 60 * 1000;
 
-    // Calculate initial daily ROI rate (randomized within range if available, otherwise use estimatedDailyEarning)
-    let randomROI: number;
-    if (plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined) {
-      const roiRange = plan.maxDailyROI - plan.minDailyROI;
-      randomROI = plan.minDailyROI + Math.random() * roiRange;
-    } else {
-      // Fallback: calculate ROI from estimatedDailyEarning and purchaseAmount
-      // This is for backward compatibility with old plans
-      randomROI = (plan.estimatedDailyEarning / args.purchaseAmount) * 100;
-    }
-    
+    const fixedDaily = resolvePlanDailyReturnUsd(plan);
+    const legacyRoi =
+      plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
+        ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
+        : args.purchaseAmount > 0
+          ? (plan.estimatedDailyEarning / args.purchaseAmount) * 100
+          : 0;
+
     const operationId = await ctx.db.insert("miningOperations", {
       userId: args.userId,
       planId: args.planId,
@@ -495,64 +459,66 @@ export const createMiningOperationFromDeposit = internalMutation({
       startTime: now,
       endTime,
       totalMined: 0,
-      currentRate: randomROI, // Store daily ROI percentage
-      lastPayoutDate: undefined, // Will be set on first payout
+      currentRate: legacyRoi,
+      dailyReturnUSD: fixedDaily > 0 ? fixedDaily : undefined,
+      lastPayoutDate: undefined,
       status: "active",
       pausedBy: undefined,
       createdAt: now,
     });
 
-    // Deduct the purchase amount from user's platform balance
-    // Convert USD purchase amount to crypto amounts using provided prices
+    const usdc = user.platformBalance.USDC;
+    const usdt = user.platformBalance.USDT;
+    const ethBalance = user.platformBalance.ETH;
     const btcBalance = user.platformBalance.BTC ?? 0;
-    const ethBalance = user.platformBalance.ETH ?? 0;
-    
-    // Calculate how much USD value we have in BTC and ETH
-    const btcValueUSD = btcBalance * args.btcPriceUSD;
-    const ethValueUSD = ethBalance * args.ethPriceUSD;
-    const totalValueUSD = btcValueUSD + ethValueUSD;
-    
-    if (totalValueUSD < args.purchaseAmount) {
+    const totalValueUSD =
+      usdc + usdt + ethBalance * args.ethPriceUSD + btcBalance * args.btcPriceUSD;
+
+    if (totalValueUSD + 1e-9 < args.purchaseAmount) {
       throw new ConvexError("Insufficient platform balance");
     }
-    
-    // Deduct from BTC first, then ETH
+
     let remainingCostUSD = args.purchaseAmount;
-    const balanceUpdates: Partial<typeof user.platformBalance> = {};
-    
-    if (btcValueUSD > 0 && remainingCostUSD > 0) {
-      if (btcValueUSD >= remainingCostUSD) {
-        // Deduct entirely from BTC
-        const btcToDeduct = remainingCostUSD / args.btcPriceUSD;
-        balanceUpdates.BTC = btcBalance - btcToDeduct;
-        remainingCostUSD = 0;
-      } else {
-        // Deduct all BTC, continue with ETH
-        balanceUpdates.BTC = 0;
-        remainingCostUSD -= btcValueUSD;
-      }
+    let nextUSDC = usdc;
+    let nextUSDT = usdt;
+    let nextETH = ethBalance;
+    let nextBTC = btcBalance;
+
+    const takeUsdFromStable = (bal: number): [number, number] => {
+      if (remainingCostUSD <= 0 || bal <= 0) return [bal, 0];
+      const take = Math.min(bal, remainingCostUSD);
+      remainingCostUSD -= take;
+      return [bal - take, take];
+    };
+
+    [nextUSDC] = takeUsdFromStable(nextUSDC);
+    [nextUSDT] = takeUsdFromStable(nextUSDT);
+
+    if (remainingCostUSD > 0 && nextETH > 0) {
+      const ethUsd = nextETH * args.ethPriceUSD;
+      const takeUsd = Math.min(ethUsd, remainingCostUSD);
+      nextETH -= takeUsd / args.ethPriceUSD;
+      remainingCostUSD -= takeUsd;
     }
-    
-    if (ethValueUSD > 0 && remainingCostUSD > 0) {
-      // Deduct remaining from ETH
-      const ethToDeduct = remainingCostUSD / args.ethPriceUSD;
-      if (ethBalance >= ethToDeduct) {
-        balanceUpdates.ETH = ethBalance - ethToDeduct;
-        remainingCostUSD = 0;
-      } else {
-        throw new ConvexError("Insufficient platform balance");
-      }
+
+    if (remainingCostUSD > 0 && nextBTC > 0) {
+      const btcUsd = nextBTC * args.btcPriceUSD;
+      const takeUsd = Math.min(btcUsd, remainingCostUSD);
+      nextBTC -= takeUsd / args.btcPriceUSD;
+      remainingCostUSD -= takeUsd;
     }
-    
-    if (remainingCostUSD > 0) {
+
+    if (remainingCostUSD > 1e-6) {
       throw new ConvexError("Insufficient platform balance");
     }
 
     await ctx.db.patch(args.userId, {
       platformBalance: {
         ...user.platformBalance,
-        BTC: balanceUpdates.BTC ?? user.platformBalance.BTC,
-        ETH: balanceUpdates.ETH ?? user.platformBalance.ETH,
+        USDC: nextUSDC,
+        USDT: nextUSDT,
+        ETH: nextETH,
+        BTC: nextBTC,
       },
     });
 
