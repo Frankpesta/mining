@@ -142,8 +142,15 @@ export default defineSchema({
     supportedCoins: v.array(v.string()),
     minDailyROI: v.optional(v.number()), // Legacy / display: minimum daily ROI percentage
     maxDailyROI: v.optional(v.number()), // Legacy / display: maximum daily ROI percentage
-    /** Fixed USD credited per day (same value used for display and payouts). */
-    estimatedDailyEarning: v.number(),
+    /** @deprecated Payouts use tier-based random daily USD; kept for legacy data / admin. */
+    estimatedDailyEarning: v.optional(v.number()),
+    /**
+     * Daily USD range tier: low $10–30, mid $10–50, high $10–70 (whole dollars, random each day).
+     * If unset, tier is inferred from min price rank among active plans.
+     */
+    earningTier: v.optional(
+      v.union(v.literal("low"), v.literal("mid"), v.literal("high")),
+    ),
     isActive: v.boolean(),
     features: v.array(v.string()),
     idealFor: v.optional(v.string()), // Target audience description
@@ -165,8 +172,12 @@ export default defineSchema({
     endTime: v.number(),
     totalMined: v.number(), // Total earnings accumulated (in USD)
     currentRate: v.number(), // Legacy daily ROI rate (percentage) when estimated daily snapshot is absent
-    /** Snapshot of plan estimatedDailyEarning (fixed USD/day) at purchase time. */
+    /** @deprecated Legacy fixed USD/day before tier-based payouts. */
     dailyReturnUSD: v.optional(v.number()),
+    /** Tier locked at purchase; each payout day rolls a whole USD in the tier range. */
+    dailyEarningTier: v.optional(
+      v.union(v.literal("low"), v.literal("mid"), v.literal("high")),
+    ),
     lastPayoutDate: v.optional(v.number()), // Last date profits were paid out (timestamp at start of day)
     status: v.union(v.literal("active"), v.literal("completed"), v.literal("paused")),
     pausedBy: v.optional(v.id("users")),

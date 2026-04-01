@@ -2,6 +2,7 @@ import { internalMutation, internalAction } from "./_generated/server";
 import { cronJobs } from "convex/server";
 import { internal, api } from "./_generated/api";
 import { v } from "convex/values";
+import { randomDailyUsdForTier, type EarningTier } from "./earningTiers";
 
 /**
  * Helper function to get start of day timestamp (UTC)
@@ -57,25 +58,33 @@ export const processMiningOperationsMutation = internalMutation({
         continue;
       }
 
-      // Calculate daily profit based on ROI percentage
-      // operation.currentRate is the daily ROI percentage (e.g., 0.5 for 0.5%)
-      // operation.purchaseAmount is the amount invested
-      // If purchaseAmount doesn't exist (old operations), skip or use a default
       const purchaseAmount = operation.purchaseAmount ?? 0;
-      if (purchaseAmount <= 0) {
+      const tier = operation.dailyEarningTier;
+      const hasTier =
+        tier === "low" || tier === "mid" || tier === "high";
+
+      if (!hasTier && purchaseAmount <= 0) {
         console.warn(`[processMiningOperations] Operation ${operation._id} has no purchaseAmount, skipping`);
         processed++;
         continue;
       }
 
-      const fixedDaily =
-        operation.dailyReturnUSD !== undefined && operation.dailyReturnUSD > 0
-          ? operation.dailyReturnUSD
-          : null;
-      const dailyProfitUSD =
-        fixedDaily !== null
-          ? fixedDaily
-          : (operation.currentRate / 100) * purchaseAmount;
+      let dailyProfitUSD: number;
+      if (hasTier) {
+        dailyProfitUSD = randomDailyUsdForTier(tier as EarningTier);
+      } else if (operation.dailyReturnUSD !== undefined && operation.dailyReturnUSD > 0) {
+        dailyProfitUSD = operation.dailyReturnUSD;
+      } else if (purchaseAmount > 0) {
+        dailyProfitUSD = (operation.currentRate / 100) * purchaseAmount;
+      } else {
+        processed++;
+        continue;
+      }
+
+      if (dailyProfitUSD <= 0) {
+        processed++;
+        continue;
+      }
 
       // Get real-time price for the coin
       const coinPrice = prices[operation.coin.toUpperCase()] ?? 0;

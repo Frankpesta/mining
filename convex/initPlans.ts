@@ -29,7 +29,7 @@ export const initializePlans = internalMutation({
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
       minDailyROI: 0.5, // 0.5%
       maxDailyROI: 0.7, // 0.7%
-      estimatedDailyEarning: 10.53,
+      earningTier: "low" as const,
       isActive: true,
       features: [
         "500 Gh/s HashPower",
@@ -56,7 +56,7 @@ export const initializePlans = internalMutation({
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
       minDailyROI: 0.8,
       maxDailyROI: 1.0,
-      estimatedDailyEarning: 59.09,
+      earningTier: "mid" as const,
       isActive: true,
       features: [
         "70 Th/s HashPower",
@@ -83,7 +83,7 @@ export const initializePlans = internalMutation({
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
       minDailyROI: 1.4,
       maxDailyROI: 1.8,
-      estimatedDailyEarning: 255.74,
+      earningTier: "high" as const,
       isActive: true,
       features: [
         "250 Th/s HashPower",
@@ -110,7 +110,7 @@ export const initializePlans = internalMutation({
       supportedCoins: ["BTC", "ETH", "LTC", "SOL", "BNB", "ADA", "XRP", "DOGE", "DOT", "MATIC", "AVAX", "ATOM", "LINK", "UNI"],
       minDailyROI: 2.0,
       maxDailyROI: 2.3,
-      estimatedDailyEarning: 431.64,
+      earningTier: "high" as const,
       isActive: true,
       features: [
         "500 Th/s HashPower",

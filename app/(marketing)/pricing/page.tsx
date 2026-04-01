@@ -5,6 +5,10 @@ import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency } from "@/lib/utils";
+import {
+  inferEarningTierForPlan,
+  formatEarningTierWithLabel,
+} from "@/lib/earning-tiers";
 
 function formatHashRate(hashRate: number, unit: string): string {
   // Use actual value without K notation - show full number
@@ -60,6 +64,7 @@ export default async function PricingPage() {
     const supportedCoinsDisplay = plan.supportedCoins.join(", ");
     
     // Create description from plan data
+    const tier = plan.earningTier ?? inferEarningTierForPlan(plan._id, backendPlans);
     const description = `${hashRateDisplay} of mining power for ${plan.duration} days. Supports ${supportedCoinsDisplay}.`;
 
     return {
@@ -74,7 +79,7 @@ export default async function PricingPage() {
             `${hashRateDisplay} hash rate`,
             `Duration: ${plan.duration} days`,
             `Supported coins: ${supportedCoinsDisplay}`,
-            `Estimated daily earning: ${formatCurrency(plan.estimatedDailyEarning, "USD", false)}`,
+            formatEarningTierWithLabel(tier),
           ],
       cta: "Get started",
       highlight: index === Math.floor(backendPlans.length / 2), // Highlight middle plan

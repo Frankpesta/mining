@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { api } from "@/convex/_generated/api";
 import { getConvexClient } from "@/lib/convex/client";
-import { getCurrentUser, requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/session";
 import type { Id } from "@/convex/_generated/dataModel";
 
 type CreatePlanInput = {
@@ -18,7 +18,7 @@ type CreatePlanInput = {
   supportedCoins: string;
   minDailyROI: number;
   maxDailyROI: number;
-  estimatedDailyEarning: number;
+  earningTierMode: "auto" | "low" | "mid" | "high";
   isActive: boolean;
   features: string;
   idealFor?: string;
@@ -53,7 +53,7 @@ export async function createPlan(input: CreatePlanInput) {
     supportedCoins,
     minDailyROI: input.minDailyROI,
     maxDailyROI: input.maxDailyROI,
-    estimatedDailyEarning: input.estimatedDailyEarning,
+    earningTier: input.earningTierMode === "auto" ? undefined : input.earningTierMode,
     isActive: input.isActive,
     features,
     idealFor: input.idealFor,
@@ -88,7 +88,8 @@ export async function updatePlan(input: UpdatePlanInput) {
     supportedCoins,
     minDailyROI: input.minDailyROI,
     maxDailyROI: input.maxDailyROI,
-    estimatedDailyEarning: input.estimatedDailyEarning,
+    clearEarningTier: input.earningTierMode === "auto",
+    earningTier: input.earningTierMode === "auto" ? undefined : input.earningTierMode,
     isActive: input.isActive,
     features,
     idealFor: input.idealFor,

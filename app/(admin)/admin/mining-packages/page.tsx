@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/table";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { inferEarningTierForPlan, formatEarningTierRange } from "@/lib/earning-tiers";
 import { createPlan, deletePlan, togglePlanStatus, updatePlan } from "./actions";
 import { PlanActions } from "./plan-actions";
 
@@ -81,7 +82,7 @@ export default async function AdminMiningPackagesPage() {
                     <TableHead>Hash Rate</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Daily earning (USD)</TableHead>
+                    <TableHead>Daily range (USD)</TableHead>
                     <TableHead>Coins</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
@@ -97,7 +98,11 @@ export default async function AdminMiningPackagesPage() {
                       </TableCell>
                       <TableCell>{plan.duration} days</TableCell>
                       <TableCell>{formatCurrency(plan.priceUSD, "USD", false)}</TableCell>
-                      <TableCell>{formatCurrency(plan.estimatedDailyEarning, "USD", false)}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {formatEarningTierRange(
+                          plan.earningTier ?? inferEarningTierForPlan(plan._id, plans),
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           {plan.supportedCoins.map((coin) => (

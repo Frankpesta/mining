@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { selectLeastQualifyingPlanForDeposit } from "./planSelection";
-import { resolvePlanDailyReturnUsd } from "./plans";
+import { resolveEarningTierForPlan } from "./earningTiers";
 
 type Crypto = "ETH" | "BTC" | "USDT" | "USDC";
 
@@ -441,12 +441,17 @@ export const createMiningOperationFromDeposit = internalMutation({
     const now = Date.now();
     const endTime = now + plan.duration * 24 * 60 * 60 * 1000;
 
-    const fixedDaily = resolvePlanDailyReturnUsd(plan);
+    const activePlans = await ctx.db
+      .query("plans")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+    const dailyEarningTier = resolveEarningTierForPlan(plan, activePlans);
+
     const legacyRoi =
       plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
         ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
         : args.purchaseAmount > 0
-          ? (plan.estimatedDailyEarning / args.purchaseAmount) * 100
+          ? ((plan.estimatedDailyEarning ?? 0) / args.purchaseAmount) * 100
           : 0;
 
     const operationId = await ctx.db.insert("miningOperations", {
@@ -460,7 +465,7 @@ export const createMiningOperationFromDeposit = internalMutation({
       endTime,
       totalMined: 0,
       currentRate: legacyRoi,
-      dailyReturnUSD: fixedDaily > 0 ? fixedDaily : undefined,
+      dailyEarningTier,
       lastPayoutDate: undefined,
       status: "active",
       pausedBy: undefined,

@@ -30,9 +30,11 @@ const planFormSchema = z.object({
   supportedCoins: z.string().min(1, "At least one coin is required"),
   minDailyROI: z.number().nonnegative("Minimum daily ROI must be non-negative"),
   maxDailyROI: z.number().nonnegative("Maximum daily ROI must be non-negative"),
-  estimatedDailyEarning: z
-    .number()
-    .positive("Estimated daily earning must be greater than zero"),
+  /**
+   * Auto: infer tier from plan price rank (cheapest → $10–30/day, mid → $10–50, top → $10–70).
+   * Or pin a tier explicitly.
+   */
+  earningTierMode: z.enum(["auto", "low", "mid", "high"]),
   isActive: z.boolean(),
   features: z.string().min(1, "At least one feature is required"),
   idealFor: z.string().optional(),
@@ -63,7 +65,7 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
       supportedCoins: initialValues?.supportedCoins ?? "",
       minDailyROI: initialValues?.minDailyROI ?? 0,
       maxDailyROI: initialValues?.maxDailyROI ?? 0,
-      estimatedDailyEarning: initialValues?.estimatedDailyEarning ?? 0.01,
+      earningTierMode: initialValues?.earningTierMode ?? "auto",
       isActive: initialValues?.isActive ?? true,
       features: initialValues?.features ?? "",
       idealFor: initialValues?.idealFor ?? "",
@@ -227,23 +229,25 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
 
           <FormField
             control={form.control}
-            name="estimatedDailyEarning"
+            name="earningTierMode"
             render={({ field }) => (
               <FormItem className="md:col-span-2 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                <FormLabel className="text-base">Estimated daily earning (USD)</FormLabel>
+                <FormLabel className="text-base">Daily earning tier (USD, random each day)</FormLabel>
                 <FormControl>
-                  <Input
+                  <select
                     {...field}
-                    type="number"
-                    step="0.01"
-                    onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    className="max-w-xs font-mono tabular-nums"
-                  />
+                    className="flex h-10 w-full max-w-md rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="auto">Auto by price rank among active plans</option>
+                    <option value="low">Entry — $10–30 / day (whole dollars)</option>
+                    <option value="mid">Growth — $10–50 / day</option>
+                    <option value="high">Max — $10–70 / day</option>
+                  </select>
                 </FormControl>
                 <FormDescription>
-                  Fixed dollar amount credited every day for this plan. Same value is shown to users
-                  and used for payouts (converted to the mined asset at market price). Not a
-                  percentage of principal.
+                  Each payout day the system picks a random whole-dollar amount in the tier range.
+                  Higher tiers can pay more per day. Auto assigns cheapest active plan → Entry, most
+                  expensive → Max, others → Growth.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

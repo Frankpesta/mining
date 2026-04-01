@@ -12,6 +12,7 @@ import type * as activity from "../activity.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as deposits from "../deposits.js";
+import type * as earningTiers from "../earningTiers.js";
 import type * as emails from "../emails.js";
 import type * as hotWallets from "../hotWallets.js";
 import type * as http from "../http.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   dashboard: typeof dashboard;
   deposits: typeof deposits;
+  earningTiers: typeof earningTiers;
   emails: typeof emails;
   hotWallets: typeof hotWallets;
   http: typeof http;

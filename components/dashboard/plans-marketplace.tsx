@@ -22,6 +22,11 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
 import { formatCurrency } from "@/lib/utils";
+import {
+  inferEarningTierForPlan,
+  formatEarningTierWithLabel,
+  type EarningTier,
+} from "@/lib/earning-tiers";
 import { purchasePlan } from "@/app/(dashboard)/dashboard/mining-packages/actions";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -31,19 +36,22 @@ type Plan = {
   hashRate: number;
   hashRateUnit: "TH/s" | "GH/s" | "MH/s";
   duration: number;
+  minPriceUSD?: number;
   priceUSD: number;
   supportedCoins: string[];
-  estimatedDailyEarning: number;
   features: string[];
+  earningTier?: EarningTier;
 };
 
 type PlanCardProps = {
   plan: Plan;
+  allPlans: Plan[];
   userId: string;
   userBalance: number;
 };
 
-function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
+function PlanCard({ plan, allPlans, userId, userBalance }: PlanCardProps) {
+  const rewardTier = plan.earningTier ?? inferEarningTierForPlan(plan._id, allPlans);
   const [isPurchasing, startPurchase] = useTransition();
   const canAfford = userBalance >= plan.priceUSD;
 
@@ -85,10 +93,11 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
       </CardHeader>
       <CardContent className="flex-1 space-y-4">
         <div>
-          <p className="text-sm font-semibold text-muted-foreground">Estimated daily earnings</p>
-          <p className="text-lg font-semibold text-emerald-500">
-            {formatCurrency(plan.estimatedDailyEarning, "USD", false)}
+          <p className="text-sm font-semibold text-muted-foreground">Daily mining reward</p>
+          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 leading-snug">
+            {formatEarningTierWithLabel(rewardTier)}
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">Random whole-dollar amount each day</p>
         </div>
 
         <div>
@@ -196,7 +205,13 @@ export function PlansMarketplace({ plans, userId, userBalance }: PlansMarketplac
   return (
     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
       {plans.map((plan) => (
-        <PlanCard key={plan._id} plan={plan} userId={userId} userBalance={userBalance} />
+        <PlanCard
+          key={plan._id}
+          plan={plan}
+          allPlans={plans}
+          userId={userId}
+          userBalance={userBalance}
+        />
       ))}
     </div>
   );

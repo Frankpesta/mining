@@ -1,12 +1,8 @@
 import { ConvexError, v } from "convex/values";
 
 import { mutation, query, internalQuery } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
-
-/** Fixed daily payout in USD comes from the plan's estimated daily earning only. */
-export function resolvePlanDailyReturnUsd(plan: Doc<"plans">): number {
-  return plan.estimatedDailyEarning > 0 ? plan.estimatedDailyEarning : 0;
-}
+import type { Id } from "./_generated/dataModel";
+import { resolveEarningTierForPlan } from "./earningTiers";
 
 export const listPlans = query({
   args: {
@@ -54,7 +50,10 @@ export const createPlan = mutation({
     supportedCoins: v.array(v.string()),
     minDailyROI: v.number(),
     maxDailyROI: v.number(),
-    estimatedDailyEarning: v.number(),
+    estimatedDailyEarning: v.optional(v.number()),
+    earningTier: v.optional(
+      v.union(v.literal("low"), v.literal("mid"), v.literal("high")),
+    ),
     isActive: v.boolean(),
     features: v.array(v.string()),
     idealFor: v.optional(v.string()),
@@ -67,8 +66,12 @@ export const createPlan = mutation({
     );
     const now = Date.now();
 
+    const { earningTier, estimatedDailyEarning, ...rest } = args;
+
     return ctx.db.insert("plans", {
-      ...args,
+      ...rest,
+      estimatedDailyEarning: estimatedDailyEarning ?? 0,
+      ...(earningTier !== undefined ? { earningTier } : {}),
       createdAt: now,
       updatedAt: now,
       order: maxOrder + 1,
@@ -90,21 +93,32 @@ export const updatePlan = mutation({
     minDailyROI: v.optional(v.number()),
     maxDailyROI: v.optional(v.number()),
     estimatedDailyEarning: v.optional(v.number()),
+    earningTier: v.optional(
+      v.union(v.literal("low"), v.literal("mid"), v.literal("high")),
+    ),
+    clearEarningTier: v.optional(v.boolean()),
     isActive: v.optional(v.boolean()),
     features: v.optional(v.array(v.string())),
     idealFor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { planId, ...updates } = args;
+    const { planId, clearEarningTier, earningTier, ...updates } = args;
     const plan = await ctx.db.get(planId);
     if (!plan) {
       throw new ConvexError("Plan not found");
     }
 
-    await ctx.db.patch(planId, {
+    const patch: Record<string, unknown> = {
       ...updates,
       updatedAt: Date.now(),
-    });
+    };
+    if (clearEarningTier) {
+      patch.earningTier = undefined;
+    } else if (earningTier !== undefined) {
+      patch.earningTier = earningTier;
+    }
+
+    await ctx.db.patch(planId, patch as Partial<typeof plan>);
   },
 });
 
@@ -205,15 +219,19 @@ export const purchasePlan = mutation({
     }
 
     const now = Date.now();
-    // Duration is in days, convert to milliseconds
     const endTime = now + plan.duration * 24 * 60 * 60 * 1000;
 
-    const fixedDaily = resolvePlanDailyReturnUsd(plan);
+    const activePlans = await ctx.db
+      .query("plans")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+    const dailyEarningTier = resolveEarningTierForPlan(plan, activePlans);
+
     const legacyRoi =
       plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
         ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
         : purchaseAmount > 0
-          ? (plan.estimatedDailyEarning / purchaseAmount) * 100
+          ? ((plan.estimatedDailyEarning ?? 0) / purchaseAmount) * 100
           : 0;
 
     const operationId = await ctx.db.insert("miningOperations", {
@@ -227,7 +245,7 @@ export const purchasePlan = mutation({
       endTime,
       totalMined: 0,
       currentRate: legacyRoi,
-      dailyReturnUSD: fixedDaily > 0 ? fixedDaily : undefined,
+      dailyEarningTier,
       lastPayoutDate: undefined, // Will be set on first payout
       status: "active",
       pausedBy: undefined,
