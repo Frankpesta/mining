@@ -6,6 +6,9 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency } from "@/lib/utils";
 
+/** Convex-backed; must not be statically prerendered or plans stay frozen at build time. */
+export const dynamic = "force-dynamic";
+
 function formatHashRate(hashRate: number, unit: string): string {
   return `${hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${unit}`;
 }
