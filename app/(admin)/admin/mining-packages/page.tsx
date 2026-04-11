@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/table";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { inferEarningTierForPlan, formatEarningTierRange } from "@/lib/earning-tiers";
 import { createPlan, deletePlan, togglePlanStatus, updatePlan } from "./actions";
 import { PlanActions } from "./plan-actions";
 
@@ -82,7 +81,8 @@ export default async function AdminMiningPackagesPage() {
                     <TableHead>Hash Rate</TableHead>
                     <TableHead>Duration</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Daily range (USD)</TableHead>
+                    <TableHead>Daily ROI</TableHead>
+                    <TableHead>Renewal</TableHead>
                     <TableHead>Coins</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Created</TableHead>
@@ -97,11 +97,14 @@ export default async function AdminMiningPackagesPage() {
                         {plan.hashRate} {plan.hashRateUnit}
                       </TableCell>
                       <TableCell>{plan.duration} days</TableCell>
-                      <TableCell>{formatCurrency(plan.priceUSD, "USD", false)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatEarningTierRange(
-                          plan.earningTier ?? inferEarningTierForPlan(plan._id, plans),
-                        )}
+                      <TableCell>{formatCurrency(plan.priceUSD, "USD")}</TableCell>
+                      <TableCell className="text-sm font-medium tabular-nums">
+                        {plan.dailyRoiPercent != null
+                          ? `${plan.dailyRoiPercent}% / day`
+                          : "— (legacy)"}
+                      </TableCell>
+                      <TableCell className="text-sm capitalize text-muted-foreground">
+                        {plan.renewalType ?? "manual"}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">

@@ -59,7 +59,7 @@ export default async function DashboardOverviewPage() {
     },
     {
       label: "Mining earnings",
-      value: formatCurrency(miningBalanceUSD, "USD", false),
+      value: formatCurrency(miningBalanceUSD, "USD"),
       hint: "Accumulated rewards ready for payout",
     },
     {

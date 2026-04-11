@@ -1,10 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 
 import { api } from "@/convex/_generated/api";
 import { getConvexClient } from "@/lib/convex/client";
-import { getCurrentUser, requireAdminSession } from "@/lib/auth/session";
+import { requireAdminSession } from "@/lib/auth/session";
 import type { Id } from "@/convex/_generated/dataModel";
 
 export async function updateUserRole(userId: string, newRole: "user" | "admin") {
@@ -32,32 +33,46 @@ export async function toggleUserSuspension(userId: string) {
   revalidatePath("/admin/users");
 }
 
+export type AdjustUserPlatformBalanceResult =
+  | { ok: true }
+  | { ok: false; message: string };
+
 export async function adjustUserPlatformBalance(input: {
   userId: string;
   crypto: "ETH" | "BTC" | "USDT" | "USDC";
   amount: number;
   direction: "add" | "subtract";
   note?: string;
-}) {
-  const session = await requireAdminSession();
-  const convex = getConvexClient();
-
+}): Promise<AdjustUserPlatformBalanceResult> {
   const magnitude = Math.abs(input.amount);
   if (!Number.isFinite(magnitude) || magnitude <= 0) {
-    throw new Error("Enter a valid positive amount.");
+    return { ok: false, message: "Enter a valid positive amount." };
   }
 
-  const delta = input.direction === "add" ? magnitude : -magnitude;
+  try {
+    const session = await requireAdminSession();
+    const convex = getConvexClient();
 
-  await convex.mutation(api.usersAdmin.adjustUserPlatformBalance, {
-    adminId: session.payload.userId as Id<"users">,
-    userId: input.userId as Id<"users">,
-    crypto: input.crypto,
-    delta,
-    note: input.note,
-  });
+    const delta = input.direction === "add" ? magnitude : -magnitude;
+
+    await convex.mutation(api.usersAdmin.adjustUserPlatformBalance, {
+      adminId: session.payload.userId as Id<"users">,
+      userId: input.userId as Id<"users">,
+      crypto: input.crypto,
+      delta,
+      note: input.note,
+    });
+  } catch (error) {
+    unstable_rethrow(error);
+    const message =
+      error instanceof Error && error.message
+        ? error.message
+        : "Balance adjustment failed.";
+    return { ok: false, message };
+  }
 
   revalidatePath("/admin/users");
   revalidatePath(`/admin/users/${input.userId}`);
+  return { ok: true };
 }
 

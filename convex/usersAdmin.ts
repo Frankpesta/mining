@@ -136,9 +136,12 @@ export const adjustUserPlatformBalance = mutation({
     const current =
       key === "BTC"
         ? (user.platformBalance.BTC ?? 0)
-        : (user.platformBalance[key] as number);
+        : ((user.platformBalance[key] as number | undefined) ?? 0);
 
     const next = current + args.delta;
+    if (!Number.isFinite(next)) {
+      throw new ConvexError("Invalid adjustment: balance is not a valid number");
+    }
     if (next < -1e-12) {
       throw new ConvexError("Adjustment would result in a negative balance");
     }

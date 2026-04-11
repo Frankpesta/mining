@@ -3,6 +3,10 @@ import { cronJobs } from "convex/server";
 import { internal, api } from "./_generated/api";
 import { v } from "convex/values";
 import { randomDailyUsdForTier, type EarningTier } from "./earningTiers";
+import {
+  deductUsdLikeFromPlatformBalance,
+  totalUsdLikePlatformBalance,
+} from "./platformBalanceUsd";
 
 /**
  * Helper function to get start of day timestamp (UTC)
@@ -41,7 +45,45 @@ export const processMiningOperationsMutation = internalMutation({
     for (const operation of activeOperations) {
       // Check if operation has expired
       if (now >= operation.endTime) {
-        // Mark as completed
+        const plan = await ctx.db.get(operation.planId);
+        const autoRenew = plan !== null && (plan.renewalType ?? "manual") === "auto";
+        if (autoRenew && plan !== null) {
+          const user = await ctx.db.get(operation.userId);
+          const balance = user ? totalUsdLikePlatformBalance(user) : 0;
+          if (
+            user &&
+            balance + 1e-9 >= operation.purchaseAmount &&
+            operation.purchaseAmount > 0
+          ) {
+            try {
+              await deductUsdLikeFromPlatformBalance(ctx, user, operation.purchaseAmount);
+            } catch {
+              await ctx.db.patch(operation._id, { status: "completed" });
+              completed++;
+              processed++;
+              continue;
+            }
+            const newEnd = now + plan.duration * 24 * 60 * 60 * 1000;
+            await ctx.db.patch(operation._id, {
+              endTime: newEnd,
+              startTime: now,
+              lastPayoutDate: undefined,
+            });
+            await ctx.db.insert("auditLogs", {
+              actorId: operation.userId,
+              action: "mining:autoRenew",
+              entity: "miningOperation",
+              entityId: operation._id,
+              metadata: {
+                planId: operation.planId,
+                purchaseAmount: operation.purchaseAmount,
+              },
+              createdAt: now,
+            });
+            processed++;
+            continue;
+          }
+        }
         await ctx.db.patch(operation._id, {
           status: "completed",
         });
@@ -74,7 +116,11 @@ export const processMiningOperationsMutation = internalMutation({
         dailyProfitUSD = randomDailyUsdForTier(tier as EarningTier);
       } else if (operation.dailyReturnUSD !== undefined && operation.dailyReturnUSD > 0) {
         dailyProfitUSD = operation.dailyReturnUSD;
-      } else if (purchaseAmount > 0) {
+      } else if (
+        purchaseAmount > 0 &&
+        operation.currentRate > 0 &&
+        Number.isFinite(operation.currentRate)
+      ) {
         dailyProfitUSD = (operation.currentRate / 100) * purchaseAmount;
       } else {
         processed++;

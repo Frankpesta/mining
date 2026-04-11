@@ -445,14 +445,20 @@ export const createMiningOperationFromDeposit = internalMutation({
       .query("plans")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
-    const dailyEarningTier = resolveEarningTierForPlan(plan, activePlans);
+    let dailyEarningTier: "low" | "mid" | "high" | undefined;
+    let currentRate: number;
 
-    const legacyRoi =
-      plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
-        ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
-        : args.purchaseAmount > 0
-          ? ((plan.estimatedDailyEarning ?? 0) / args.purchaseAmount) * 100
-          : 0;
+    if (plan.dailyRoiPercent !== undefined && plan.dailyRoiPercent > 0) {
+      currentRate = plan.dailyRoiPercent;
+    } else {
+      dailyEarningTier = resolveEarningTierForPlan(plan, activePlans);
+      currentRate =
+        plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
+          ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
+          : args.purchaseAmount > 0
+            ? ((plan.estimatedDailyEarning ?? 0) / args.purchaseAmount) * 100
+            : 0;
+    }
 
     const operationId = await ctx.db.insert("miningOperations", {
       userId: args.userId,
@@ -464,8 +470,8 @@ export const createMiningOperationFromDeposit = internalMutation({
       startTime: now,
       endTime,
       totalMined: 0,
-      currentRate: legacyRoi,
-      dailyEarningTier,
+      currentRate,
+      ...(dailyEarningTier !== undefined ? { dailyEarningTier } : {}),
       lastPayoutDate: undefined,
       status: "active",
       pausedBy: undefined,

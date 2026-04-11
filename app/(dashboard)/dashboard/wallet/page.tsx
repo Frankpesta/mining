@@ -117,7 +117,7 @@ export default async function WalletPage() {
             )}
             <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs uppercase tracking-wide text-muted-foreground">
               <span>Total (USD)</span>
-              <span className="text-sm font-semibold">{formatCurrency(miningBalanceUSD, "USD", false)}</span>
+              <span className="text-sm font-semibold">{formatCurrency(miningBalanceUSD, "USD")}</span>
             </div>
           </CardContent>
         </Card>

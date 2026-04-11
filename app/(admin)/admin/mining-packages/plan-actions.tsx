@@ -32,9 +32,8 @@ type Plan = {
   maxPriceUSD?: number;
   priceUSD: number;
   supportedCoins: string[];
-  minDailyROI?: number;
-  maxDailyROI?: number;
-  earningTier?: "low" | "mid" | "high";
+  dailyRoiPercent?: number;
+  renewalType?: "manual" | "auto";
   isActive: boolean;
   features: string[];
   idealFor?: string;
@@ -114,9 +113,8 @@ export function PlanActions({ plan }: PlanActionsProps) {
               maxPriceUSD: plan.maxPriceUSD,
               priceUSD: plan.priceUSD,
               supportedCoins: plan.supportedCoins.join(", "),
-              minDailyROI: plan.minDailyROI ?? 0,
-              maxDailyROI: plan.maxDailyROI ?? 0,
-              earningTierMode: plan.earningTier ?? "auto",
+              dailyRoiPercent: plan.dailyRoiPercent ?? 7,
+              renewalType: plan.renewalType ?? "manual",
               isActive: plan.isActive,
               features: plan.features.join("\n"),
               idealFor: plan.idealFor,

@@ -5,13 +5,8 @@ import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency } from "@/lib/utils";
-import {
-  inferEarningTierForPlan,
-  formatEarningTierWithLabel,
-} from "@/lib/earning-tiers";
 
 function formatHashRate(hashRate: number, unit: string): string {
-  // Use actual value without K notation - show full number
   return `${hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} ${unit}`;
 }
 
@@ -63,23 +58,31 @@ export default async function PricingPage() {
     const hashRateDisplay = formatHashRate(plan.hashRate, plan.hashRateUnit);
     const supportedCoinsDisplay = plan.supportedCoins.join(", ");
     
-    // Create description from plan data
-    const tier = plan.earningTier ?? inferEarningTierForPlan(plan._id, backendPlans);
-    const description = `${hashRateDisplay} of mining power for ${plan.duration} days. Supports ${supportedCoinsDisplay}.`;
+    const min = plan.minPriceUSD ?? plan.priceUSD;
+    const max = plan.maxPriceUSD;
+    const range =
+      max !== undefined
+        ? `${formatCurrency(min)} – ${formatCurrency(max)} committed balance`
+        : `${formatCurrency(min)}+ committed balance`;
+    const roiLine =
+      plan.dailyRoiPercent != null
+        ? `${plan.dailyRoiPercent}% daily return on your committed principal`
+        : "Daily returns configured per contract";
+    const description = `${hashRateDisplay} • ${formatDuration(plan.duration)} • ${supportedCoinsDisplay}.`;
 
     return {
       id: plan._id,
       name: plan.name,
-      price: formatCurrency(plan.priceUSD, "USD", false),
+      price: formatCurrency(plan.priceUSD, "USD"),
       cadence: formatDuration(plan.duration),
       description,
       features: plan.features.length > 0 
         ? plan.features 
         : [
+            range,
+            roiLine,
             `${hashRateDisplay} hash rate`,
-            `Duration: ${plan.duration} days`,
-            `Supported coins: ${supportedCoinsDisplay}`,
-            formatEarningTierWithLabel(tier),
+            `${plan.renewalType === "auto" ? "Auto" : "Manual"} renewal`,
           ],
       cta: "Get started",
       highlight: index === Math.floor(backendPlans.length / 2), // Highlight middle plan
@@ -104,7 +107,7 @@ export default async function PricingPage() {
           <p className="text-muted-foreground">No plans available at the moment. Please check back later.</p>
         </section>
       ) : (
-        <section className="grid gap-6 md:grid-cols-3">
+        <section className="grid gap-6 md:grid-cols-2">
           {plans.map((plan: {
             id: string;
             name: string;

@@ -29,8 +29,8 @@ export default async function MiningPackagesPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Mining Packages</h1>
         <p className="text-sm text-muted-foreground">
-          Browse curated mining contracts with transparent pricing, estimated returns, and
-          supported coins.
+          Each plan commits your platform balance (between its min and max) and pays a fixed daily
+          percentage of that principal to your wallet.
         </p>
       </div>
 

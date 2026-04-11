@@ -140,13 +140,15 @@ export default defineSchema({
     maxPriceUSD: v.optional(v.number()), // Maximum entry amount (optional for unlimited)
     priceUSD: v.number(), // Default/display price (required for backward compatibility)
     supportedCoins: v.array(v.string()),
+    /** Daily return as percent of committed principal (e.g. 7 = 7% per day). */
+    dailyRoiPercent: v.optional(v.number()),
+    renewalType: v.optional(v.union(v.literal("manual"), v.literal("auto"))),
     minDailyROI: v.optional(v.number()), // Legacy / display: minimum daily ROI percentage
     maxDailyROI: v.optional(v.number()), // Legacy / display: maximum daily ROI percentage
-    /** @deprecated Payouts use tier-based random daily USD; kept for legacy data / admin. */
+    /** @deprecated Legacy fixed USD/day snapshot. */
     estimatedDailyEarning: v.optional(v.number()),
     /**
-     * Daily USD range tier: low $10–30, mid $10–50, high $10–70 (whole dollars, random each day).
-     * If unset, tier is inferred from min price rank among active plans.
+     * @deprecated Legacy tier random USD/day. New plans use dailyRoiPercent only.
      */
     earningTier: v.optional(
       v.union(v.literal("low"), v.literal("mid"), v.literal("high")),

@@ -61,24 +61,24 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
     }
 
     start(async () => {
-      try {
-        await adjustUserPlatformBalance({
-          userId,
-          crypto: asset,
-          amount: n,
-          direction: mode,
-          note: note.trim() || undefined,
-        });
-        toast.success(
-          mode === "add"
-            ? `Added ${n} ${asset} to the account.`
-            : `Removed ${n} ${asset} from the account.`,
-        );
-        resetForm();
-        router.refresh();
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Balance adjustment failed.");
+      const result = await adjustUserPlatformBalance({
+        userId,
+        crypto: asset,
+        amount: n,
+        direction: mode,
+        note: note.trim() || undefined,
+      });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
       }
+      toast.success(
+        mode === "add"
+          ? `Added ${n} ${asset} to the account.`
+          : `Removed ${n} ${asset} from the account.`,
+      );
+      resetForm();
+      router.refresh();
     });
   }
 

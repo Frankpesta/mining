@@ -3,6 +3,10 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { resolveEarningTierForPlan } from "./earningTiers";
+import {
+  deductUsdLikeFromPlatformBalance,
+  totalUsdLikePlatformBalance,
+} from "./platformBalanceUsd";
 
 export const listPlans = query({
   args: {
@@ -48,8 +52,10 @@ export const createPlan = mutation({
     maxPriceUSD: v.optional(v.number()),
     priceUSD: v.number(), // Default/display price
     supportedCoins: v.array(v.string()),
-    minDailyROI: v.number(),
-    maxDailyROI: v.number(),
+    dailyRoiPercent: v.number(),
+    renewalType: v.union(v.literal("manual"), v.literal("auto")),
+    minDailyROI: v.optional(v.number()),
+    maxDailyROI: v.optional(v.number()),
     estimatedDailyEarning: v.optional(v.number()),
     earningTier: v.optional(
       v.union(v.literal("low"), v.literal("mid"), v.literal("high")),
@@ -90,6 +96,8 @@ export const updatePlan = mutation({
     maxPriceUSD: v.optional(v.number()),
     priceUSD: v.optional(v.number()),
     supportedCoins: v.optional(v.array(v.string())),
+    dailyRoiPercent: v.optional(v.number()),
+    renewalType: v.optional(v.union(v.literal("manual"), v.literal("auto"))),
     minDailyROI: v.optional(v.number()),
     maxDailyROI: v.optional(v.number()),
     estimatedDailyEarning: v.optional(v.number()),
@@ -201,8 +209,7 @@ export const purchasePlan = mutation({
       throw new ConvexError(`Coin ${args.coin} is not supported by this plan`);
     }
 
-    const totalBalance =
-      user.platformBalance.ETH + user.platformBalance.USDT + user.platformBalance.USDC;
+    const totalBalance = totalUsdLikePlatformBalance(user);
 
     // Use minPriceUSD as minimum, or priceUSD if minPriceUSD doesn't exist (backward compatibility)
     const minPrice = plan.minPriceUSD ?? plan.priceUSD;
@@ -225,14 +232,21 @@ export const purchasePlan = mutation({
       .query("plans")
       .withIndex("by_active", (q) => q.eq("isActive", true))
       .collect();
-    const dailyEarningTier = resolveEarningTierForPlan(plan, activePlans);
 
-    const legacyRoi =
-      plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
-        ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
-        : purchaseAmount > 0
-          ? ((plan.estimatedDailyEarning ?? 0) / purchaseAmount) * 100
-          : 0;
+    let dailyEarningTier: "low" | "mid" | "high" | undefined;
+    let currentRate: number;
+
+    if (plan.dailyRoiPercent !== undefined && plan.dailyRoiPercent > 0) {
+      currentRate = plan.dailyRoiPercent;
+    } else {
+      dailyEarningTier = resolveEarningTierForPlan(plan, activePlans);
+      currentRate =
+        plan.minDailyROI !== undefined && plan.maxDailyROI !== undefined
+          ? plan.minDailyROI + Math.random() * (plan.maxDailyROI - plan.minDailyROI)
+          : purchaseAmount > 0
+            ? ((plan.estimatedDailyEarning ?? 0) / purchaseAmount) * 100
+            : 0;
+    }
 
     const operationId = await ctx.db.insert("miningOperations", {
       userId: args.userId,
@@ -244,46 +258,15 @@ export const purchasePlan = mutation({
       startTime: now,
       endTime,
       totalMined: 0,
-      currentRate: legacyRoi,
-      dailyEarningTier,
+      currentRate,
+      ...(dailyEarningTier !== undefined ? { dailyEarningTier } : {}),
       lastPayoutDate: undefined, // Will be set on first payout
       status: "active",
       pausedBy: undefined,
       createdAt: now,
     });
 
-    let remainingCost = purchaseAmount;
-    const balanceUpdates: Partial<typeof user.platformBalance> = {};
-
-    if (user.platformBalance.USDC >= remainingCost) {
-      balanceUpdates.USDC = user.platformBalance.USDC - remainingCost;
-      remainingCost = 0;
-    } else {
-      balanceUpdates.USDC = 0;
-      remainingCost -= user.platformBalance.USDC;
-    }
-
-    if (remainingCost > 0 && user.platformBalance.USDT >= remainingCost) {
-      balanceUpdates.USDT = user.platformBalance.USDT - remainingCost;
-      remainingCost = 0;
-    } else if (remainingCost > 0) {
-      balanceUpdates.USDT = 0;
-      remainingCost -= user.platformBalance.USDT;
-    }
-
-    if (remainingCost > 0 && user.platformBalance.ETH >= remainingCost) {
-      balanceUpdates.ETH = user.platformBalance.ETH - remainingCost;
-    } else if (remainingCost > 0) {
-      throw new ConvexError("Insufficient platform balance");
-    }
-
-    await ctx.db.patch(args.userId, {
-      platformBalance: {
-        ETH: balanceUpdates.ETH ?? user.platformBalance.ETH,
-        USDT: balanceUpdates.USDT ?? user.platformBalance.USDT,
-        USDC: balanceUpdates.USDC ?? user.platformBalance.USDC,
-      },
-    });
+    await deductUsdLikeFromPlatformBalance(ctx, user, purchaseAmount);
 
     await ctx.db.insert("auditLogs", {
       actorId: args.userId,

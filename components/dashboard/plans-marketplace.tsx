@@ -1,16 +1,12 @@
 "use client";
 
 import { useTransition } from "react";
-import { Check, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Dialog,
@@ -21,12 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/use-toast";
-import { formatCurrency } from "@/lib/utils";
-import {
-  inferEarningTierForPlan,
-  formatEarningTierWithLabel,
-  type EarningTier,
-} from "@/lib/earning-tiers";
+import { formatCurrency, splitUsdDisplayParts } from "@/lib/utils";
 import { purchasePlan } from "@/app/(dashboard)/dashboard/mining-packages/actions";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -37,27 +28,62 @@ type Plan = {
   hashRateUnit: "TH/s" | "GH/s" | "MH/s";
   duration: number;
   minPriceUSD?: number;
+  maxPriceUSD?: number;
   priceUSD: number;
   supportedCoins: string[];
   features: string[];
-  earningTier?: EarningTier;
+  idealFor?: string;
+  dailyRoiPercent?: number;
+  renewalType?: "manual" | "auto";
 };
+
+function formatContractLabel(days: number): string {
+  if (days === 30) return "1 Month mining contract";
+  if (days === 90) return "3 Months mining contract";
+  return `${days}-day mining contract`;
+}
+
+function commitmentSummary(plan: Plan): string {
+  const min = plan.minPriceUSD ?? plan.priceUSD;
+  const max = plan.maxPriceUSD;
+  if (max !== undefined) {
+    return `Uses your full balance from ${formatCurrency(min)} up to ${formatCurrency(max)}.`;
+  }
+  return `Uses your full balance from ${formatCurrency(min)} (no upper cap).`;
+}
+
+function HeroPrice({ amount }: { amount: number }) {
+  const { dollars, cents } = splitUsdDisplayParts(amount);
+  return (
+    <div className="flex items-start justify-center gap-0.5 text-primary">
+      <span className="text-lg font-semibold">$</span>
+      <span className="text-4xl font-bold leading-none tracking-tight">{dollars}</span>
+      <sup className="text-base font-semibold translate-y-1">.{cents}</sup>
+    </div>
+  );
+}
 
 type PlanCardProps = {
   plan: Plan;
-  allPlans: Plan[];
   userId: string;
   userBalance: number;
 };
 
-function PlanCard({ plan, allPlans, userId, userBalance }: PlanCardProps) {
-  const rewardTier = plan.earningTier ?? inferEarningTierForPlan(plan._id, allPlans);
+function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
   const [isPurchasing, startPurchase] = useTransition();
-  const canAfford = userBalance >= plan.priceUSD;
+  const minEntry = plan.minPriceUSD ?? plan.priceUSD;
+  const roi = plan.dailyRoiPercent;
+  const canAfford = userBalance >= minEntry;
+  const displayDailyUsd =
+    roi !== undefined && roi > 0 ? (roi / 100) * plan.priceUSD : 0;
+  const committedAmount =
+    plan.maxPriceUSD !== undefined
+      ? Math.min(userBalance, plan.maxPriceUSD)
+      : userBalance;
 
   const handlePurchase = (coin: string) => {
     if (!canAfford) {
-      toast.error("Insufficient balance. Please purchase hashpower first.");
+      toast.error(`You need at least ${formatCurrency(minEntry)} in your platform wallet.`);
       return;
     }
 
@@ -68,7 +94,7 @@ function PlanCard({ plan, allPlans, userId, userBalance }: PlanCardProps) {
           planId: plan._id as Id<"plans">,
           coin,
         });
-        toast.success(`Successfully purchased ${plan.name}! Mining operation started.`);
+        toast.success(`${plan.name} started. Your balance was committed to this contract.`);
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to purchase mining package");
       }
@@ -76,93 +102,86 @@ function PlanCard({ plan, allPlans, userId, userBalance }: PlanCardProps) {
   };
 
   return (
-    <Card className="flex flex-col border-border/60 bg-card/80">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-xl">{plan.name}</CardTitle>
-            <CardDescription>
-              {plan.hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} {plan.hashRateUnit} • {plan.duration} days
-            </CardDescription>
-          </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold">{formatCurrency(plan.priceUSD, "USD", false)}</p>
-            <p className="text-xs text-muted-foreground">One-time payment</p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-1 space-y-4">
+    <Card className="relative flex flex-col overflow-hidden border-2 border-primary/25 bg-card shadow-md">
+      <div className="bg-primary/90 py-2 text-center text-sm font-semibold uppercase tracking-wide text-primary-foreground">
+        {plan.idealFor ?? "Mining plan"}
+      </div>
+      <CardContent className="flex flex-1 flex-col gap-4 px-5 pb-2 pt-5 text-center">
         <div>
-          <p className="text-sm font-semibold text-muted-foreground">Daily mining reward</p>
-          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400 leading-snug">
-            {formatEarningTierWithLabel(rewardTier)}
+          <h3 className="text-xl font-bold tracking-tight text-foreground">{plan.name}</h3>
+          {plan.idealFor ? (
+            <p className="text-sm text-muted-foreground">{plan.idealFor}</p>
+          ) : null}
+        </div>
+
+        <HeroPrice amount={plan.priceUSD} />
+
+        {roi !== undefined ? (
+          <p className="text-lg font-bold uppercase leading-snug text-emerald-600 dark:text-emerald-400">
+            You earn {formatCurrency(displayDailyUsd)} daily
+            <span className="mt-1 block text-xs font-normal normal-case text-muted-foreground">
+              at {formatCurrency(plan.priceUSD)} shown — {roi}% per day on your committed amount
+            </span>
           </p>
-          <p className="mt-1 text-xs text-muted-foreground">Random whole-dollar amount each day</p>
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm font-semibold text-muted-foreground">Supported coins</p>
-          <div className="flex flex-wrap gap-2">
-            {plan.supportedCoins.map((coin) => (
-              <span
-                key={coin}
-                className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-              >
-                {coin}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {plan.features.length > 0 && (
-          <div>
-            <p className="mb-2 text-sm font-semibold text-muted-foreground">Features</p>
-            <ul className="space-y-1.5">
-              {plan.features.map((feature, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  <span>{feature}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
+        ) : (
+          <p className="text-sm text-amber-600 dark:text-amber-400">Legacy plan — contact support</p>
         )}
+
+        <div className="flex flex-col gap-2 border-y border-border py-3">
+          <p className="text-lg font-semibold text-primary">
+            {plan.hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} {plan.hashRateUnit}
+          </p>
+          <ul className="space-y-1.5 text-sm text-primary">
+            <li>{formatContractLabel(plan.duration)}</li>
+            <li>SHA-256 mining algorithm</li>
+            <li className="capitalize">{(plan.renewalType ?? "manual") === "auto" ? "Auto" : "Manual"} renewal</li>
+            <li>Zero maintenance fee</li>
+          </ul>
+        </div>
+
+        {plan.features.length > 0 ? (
+          <ul className="space-y-1 text-xs text-muted-foreground">
+            {plan.features.slice(0, 4).map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+        ) : null}
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2 px-5 pb-5">
         <Dialog>
           <DialogTrigger asChild>
-            <Button className="w-full" disabled={!canAfford || isPurchasing}>
-              <Zap className="mr-2 h-4 w-4" />
-              {isPurchasing ? "Processing..." : canAfford ? "Purchase Package" : "Insufficient balance"}
+            <Button
+              className="w-full rounded-full py-6 text-base font-bold uppercase"
+              size="lg"
+              disabled={!canAfford || isPurchasing || roi === undefined}
+            >
+              {isPurchasing ? "Processing…" : "Get this"}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Purchase {plan.name}</DialogTitle>
               <DialogDescription>
-                Select a coin to mine and confirm your purchase.
+                {commitmentSummary(plan)} Choose which asset you want credited for daily rewards.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <div className="rounded-lg border border-border/60 bg-muted/40 p-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Price</span>
-                  <span className="font-semibold">{formatCurrency(plan.priceUSD, "USD", false)}</span>
+              <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Your wallet (USD-like)</span>
+                  <span className="font-semibold">{formatCurrency(userBalance)}</span>
                 </div>
-                <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-muted-foreground">Duration</span>
-                  <span className="font-semibold">{plan.duration} days</span>
+                <div className="mt-2 flex justify-between">
+                  <span className="text-muted-foreground">Committed amount</span>
+                  <span className="font-semibold">{formatCurrency(committedAmount)}</span>
                 </div>
-                <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-muted-foreground">Hash rate</span>
-                  <span className="font-semibold">
-                    {plan.hashRate.toLocaleString(undefined, { maximumFractionDigits: 0 })} {plan.hashRateUnit}
-                  </span>
+                <div className="mt-2 flex justify-between">
+                  <span className="text-muted-foreground">Daily ROI</span>
+                  <span className="font-semibold">{roi !== undefined ? `${roi}%` : "—"}</span>
                 </div>
               </div>
-
               <div>
-                <p className="mb-2 text-sm font-semibold">Select coin to mine</p>
+                <p className="mb-2 text-sm font-semibold">Mine with</p>
                 <div className="grid grid-cols-2 gap-2">
                   {plan.supportedCoins.map((coin) => (
                     <Button
@@ -180,6 +199,9 @@ function PlanCard({ plan, allPlans, userId, userBalance }: PlanCardProps) {
             </div>
           </DialogContent>
         </Dialog>
+        <p className="text-center text-[11px] text-muted-foreground">
+          Rewards accrue daily to your platform wallet after the scheduled run.
+        </p>
       </CardFooter>
     </Card>
   );
@@ -203,17 +225,10 @@ export function PlansMarketplace({ plans, userId, userBalance }: PlansMarketplac
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="mx-auto grid max-w-lg gap-8 sm:max-w-none sm:grid-cols-2 sm:gap-6 lg:max-w-5xl">
       {plans.map((plan) => (
-        <PlanCard
-          key={plan._id}
-          plan={plan}
-          allPlans={plans}
-          userId={userId}
-          userBalance={userBalance}
-        />
+        <PlanCard key={plan._id} plan={plan} userId={userId} userBalance={userBalance} />
       ))}
     </div>
   );
 }
-

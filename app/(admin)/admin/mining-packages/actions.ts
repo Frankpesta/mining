@@ -16,9 +16,8 @@ type CreatePlanInput = {
   maxPriceUSD?: number;
   priceUSD: number;
   supportedCoins: string;
-  minDailyROI: number;
-  maxDailyROI: number;
-  earningTierMode: "auto" | "low" | "mid" | "high";
+  dailyRoiPercent: number;
+  renewalType: "manual" | "auto";
   isActive: boolean;
   features: string;
   idealFor?: string;
@@ -51,9 +50,8 @@ export async function createPlan(input: CreatePlanInput) {
     maxPriceUSD: input.maxPriceUSD,
     priceUSD: input.priceUSD,
     supportedCoins,
-    minDailyROI: input.minDailyROI,
-    maxDailyROI: input.maxDailyROI,
-    earningTier: input.earningTierMode === "auto" ? undefined : input.earningTierMode,
+    dailyRoiPercent: input.dailyRoiPercent,
+    renewalType: input.renewalType,
     isActive: input.isActive,
     features,
     idealFor: input.idealFor,
@@ -86,10 +84,9 @@ export async function updatePlan(input: UpdatePlanInput) {
     maxPriceUSD: input.maxPriceUSD,
     priceUSD: input.priceUSD,
     supportedCoins,
-    minDailyROI: input.minDailyROI,
-    maxDailyROI: input.maxDailyROI,
-    clearEarningTier: input.earningTierMode === "auto",
-    earningTier: input.earningTierMode === "auto" ? undefined : input.earningTierMode,
+    dailyRoiPercent: input.dailyRoiPercent,
+    renewalType: input.renewalType,
+    clearEarningTier: true,
     isActive: input.isActive,
     features,
     idealFor: input.idealFor,
@@ -120,4 +117,3 @@ export async function togglePlanStatus(planId: string, isActive: boolean) {
 
   revalidatePath("/admin/mining-packages");
 }
-

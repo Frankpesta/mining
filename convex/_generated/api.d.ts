@@ -22,6 +22,7 @@ import type * as miningOperations from "../miningOperations.js";
 import type * as notifications from "../notifications.js";
 import type * as planSelection from "../planSelection.js";
 import type * as plans from "../plans.js";
+import type * as platformBalanceUsd from "../platformBalanceUsd.js";
 import type * as platformSettings from "../platformSettings.js";
 import type * as prices from "../prices.js";
 import type * as profiles from "../profiles.js";
@@ -62,6 +63,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   planSelection: typeof planSelection;
   plans: typeof plans;
+  platformBalanceUsd: typeof platformBalanceUsd;
   platformSettings: typeof platformSettings;
   prices: typeof prices;
   profiles: typeof profiles;
