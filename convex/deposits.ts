@@ -168,7 +168,9 @@ export const updateDepositStatusInternal = internalMutation({
 });
 
 /**
- * Action to update deposit status and automatically start mining operation if approved
+ * Action to update deposit status. If approved, credits the platform wallet.
+ * Auto-starts a mining contract only when the deposit qualifies for a plan with
+ * `renewalType: "auto"` (e.g. Gold). Manual-renewal plans (e.g. Micro) stay on-platform for manual purchase.
  */
 export const updateDepositStatus = action({
   args: {
@@ -320,7 +322,14 @@ export const startMiningFromDeposit = internalAction({
       console.warn(`No matching plan found for deposit amount $${depositAmountUSD}`);
       return;
     }
-    
+
+    if ((matchingPlan.renewalType ?? "manual") !== "auto") {
+      console.log(
+        `[startMiningFromDeposit] Deposit ~$${depositAmountUSD.toFixed(2)} maps to plan "${matchingPlan.name}" (manual). Funds remain on platform balance.`,
+      );
+      return;
+    }
+
     // Determine which coin to mine - only BTC or ETH can be mined
     // Prefer the deposit crypto if it's BTC or ETH, otherwise default to BTC
     let miningCoin: string;
