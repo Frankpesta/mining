@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pencil, Trash2, Power } from "lucide-react";
 
 import {
@@ -44,6 +45,7 @@ type PlanActionsProps = {
 };
 
 export function PlanActions({ plan }: PlanActionsProps) {
+  const router = useRouter();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleting, startDelete] = useTransition();
 
@@ -53,22 +55,24 @@ export function PlanActions({ plan }: PlanActionsProps) {
     }
 
     startDelete(async () => {
-      try {
-        await deletePlan(plan._id);
-        toast.success("Mining package deleted successfully");
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to delete mining package");
+      const result = await deletePlan(plan._id);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
       }
+      toast.success("Mining package deleted successfully");
+      router.refresh();
     });
   };
 
   const handleToggleStatus = async () => {
-    try {
-      await togglePlanStatus(plan._id, !plan.isActive);
-      toast.success(`Mining package ${plan.isActive ? "deactivated" : "activated"} successfully`);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update mining package status");
+    const result = await togglePlanStatus(plan._id, !plan.isActive);
+    if (!result.ok) {
+      toast.error(result.message);
+      return;
     }
+    toast.success(`Mining package ${plan.isActive ? "deactivated" : "activated"} successfully`);
+    router.refresh();
   };
 
   return (
@@ -119,15 +123,7 @@ export function PlanActions({ plan }: PlanActionsProps) {
               features: plan.features.join("\n"),
               idealFor: plan.idealFor,
             }}
-            onSubmit={async (values) => {
-              try {
-                await updatePlan({ ...values, planId: plan._id });
-                toast.success("Mining package updated successfully");
-                setIsEditOpen(false);
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Failed to update mining package");
-              }
-            }}
+            onSubmit={(values) => updatePlan({ ...values, planId: plan._id })}
             onCancel={() => setIsEditOpen(false)}
           />
         </DialogContent>

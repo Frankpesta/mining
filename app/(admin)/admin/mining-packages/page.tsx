@@ -55,7 +55,7 @@ export default async function AdminMiningPackagesPage() {
             <PlanForm
               onSubmit={async (values) => {
                 "use server";
-                await createPlan(values);
+                return await createPlan(values);
               }}
             />
           </DialogContent>

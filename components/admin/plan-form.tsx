@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -18,6 +19,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
+
+export type PlanFormSubmitResult = { ok: true } | { ok: false; message: string };
 
 const planFormSchema = z.object({
   name: z.string().min(1, "Plan name is required"),
@@ -42,11 +45,12 @@ type PlanFormValues = z.infer<typeof planFormSchema>;
 type PlanFormProps = {
   planId?: string;
   initialValues?: Partial<PlanFormValues>;
-  onSubmit: (values: PlanFormValues) => Promise<void>;
+  onSubmit: (values: PlanFormValues) => Promise<void | PlanFormSubmitResult>;
   onCancel?: () => void;
 };
 
 export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanFormProps) {
+  const router = useRouter();
   const [isSubmitting, startSubmit] = useTransition();
 
   const form = useForm<PlanFormValues>({
@@ -71,11 +75,14 @@ export function PlanForm({ planId, initialValues, onSubmit, onCancel }: PlanForm
   async function handleSubmit(values: PlanFormValues) {
     startSubmit(async () => {
       try {
-        await onSubmit(values);
-        toast.success(planId ? "Plan updated successfully" : "Plan created successfully");
-        if (!planId && onCancel) {
-          onCancel();
+        const result = await onSubmit(values);
+        if (result && typeof result === "object" && "ok" in result && result.ok === false) {
+          toast.error(result.message);
+          return;
         }
+        toast.success(planId ? "Plan updated successfully" : "Plan created successfully");
+        router.refresh();
+        onCancel?.();
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : planId ? "Failed to update plan" : "Failed to create plan",
