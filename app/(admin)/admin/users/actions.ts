@@ -33,17 +33,39 @@ export async function toggleUserSuspension(userId: string) {
   revalidatePath("/admin/users");
 }
 
-export type AdjustUserPlatformBalanceResult =
+export type AdjustUserBalanceResult =
   | { ok: true }
   | { ok: false; message: string };
 
-export async function adjustUserPlatformBalance(input: {
+export type AdjustableWallet = "platform" | "mining";
+
+/** Admin-adjustable assets (must match Convex `usersAdmin.adjustUserBalance`). */
+export type AdjustableCrypto =
+  | "BTC"
+  | "ETH"
+  | "USDT"
+  | "USDC"
+  | "SOL"
+  | "LTC"
+  | "BNB"
+  | "ADA"
+  | "XRP"
+  | "DOGE"
+  | "DOT"
+  | "MATIC"
+  | "AVAX"
+  | "ATOM"
+  | "LINK"
+  | "UNI";
+
+export async function adjustUserBalance(input: {
   userId: string;
-  crypto: "ETH" | "BTC" | "USDT" | "USDC";
+  wallet: AdjustableWallet;
+  crypto: AdjustableCrypto;
   amount: number;
   direction: "add" | "subtract";
   note?: string;
-}): Promise<AdjustUserPlatformBalanceResult> {
+}): Promise<AdjustUserBalanceResult> {
   const magnitude = Math.abs(input.amount);
   if (!Number.isFinite(magnitude) || magnitude <= 0) {
     return { ok: false, message: "Enter a valid positive amount." };
@@ -55,9 +77,10 @@ export async function adjustUserPlatformBalance(input: {
 
     const delta = input.direction === "add" ? magnitude : -magnitude;
 
-    await convex.mutation(api.usersAdmin.adjustUserPlatformBalance, {
+    await convex.mutation(api.usersAdmin.adjustUserBalance, {
       adminId: session.payload.userId as Id<"users">,
       userId: input.userId as Id<"users">,
+      wallet: input.wallet,
       crypto: input.crypto,
       delta,
       note: input.note,

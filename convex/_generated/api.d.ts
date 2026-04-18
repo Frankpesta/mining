@@ -9,6 +9,7 @@
  */
 
 import type * as activity from "../activity.js";
+import type * as balanceHelpers from "../balanceHelpers.js";
 import type * as crons from "../crons.js";
 import type * as dashboard from "../dashboard.js";
 import type * as deposits from "../deposits.js";
@@ -50,6 +51,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   activity: typeof activity;
+  balanceHelpers: typeof balanceHelpers;
   crons: typeof crons;
   dashboard: typeof dashboard;
   deposits: typeof deposits;

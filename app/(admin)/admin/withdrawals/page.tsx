@@ -66,6 +66,7 @@ export default async function AdminWithdrawalsPage() {
                   finalAmount: withdrawal.finalAmount,
                   networkFee: withdrawal.networkFee,
                   crypto: withdrawal.crypto,
+                  balanceSource: withdrawal.balanceSource ?? null,
                   status: withdrawal.status,
                   createdAt: withdrawal.createdAt,
                   destinationAddress: withdrawal.destinationAddress,
@@ -98,7 +99,11 @@ export default async function AdminWithdrawalsPage() {
                       {withdrawal.finalAmount.toFixed(6)} {withdrawal.crypto}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDate(withdrawal.createdAt)} • Destination {withdrawal.destinationAddress}
+                      {formatDate(withdrawal.createdAt)} •{" "}
+                      {(withdrawal.balanceSource ?? "platform") === "mining"
+                        ? "Mining earnings"
+                        : "Platform"}{" "}
+                      • Destination {withdrawal.destinationAddress}
                     </p>
                   </div>
                   <StatusBadge status={withdrawal.status} />

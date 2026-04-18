@@ -35,7 +35,7 @@ export const createDepositRequest = mutation({
       throw new ConvexError(`No deposit wallet configured for ${args.crypto}`);
     }
 
-    return ctx.db.insert("deposits", {
+    const depositId = await ctx.db.insert("deposits", {
       userId: args.userId,
       crypto: args.crypto,
       amount: args.amount,
@@ -47,6 +47,12 @@ export const createDepositRequest = mutation({
       createdAt: Date.now(),
       approvedAt: undefined,
     });
+
+    await ctx.scheduler.runAfter(0, internal.emails.sendDepositSubmittedEmail, {
+      depositId,
+    });
+
+    return depositId;
   },
 });
 
@@ -216,6 +222,12 @@ export const updateDepositStatus = action({
         amount: deposit.amount,
       });
     }
+
+    await ctx.runAction(internal.emails.sendDepositProcessedEmail, {
+      depositId: args.depositId,
+      status: args.status,
+      adminNote: args.adminNote,
+    });
   },
 });
 

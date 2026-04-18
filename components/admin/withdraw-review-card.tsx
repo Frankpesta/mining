@@ -19,6 +19,8 @@ type AdminWithdrawal = {
   finalAmount: number;
   networkFee: number;
   crypto: "ETH" | "USDT" | "USDC" | "BTC" | "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
+  /** undefined/ platform = deposit wallet; mining = mining earnings */
+  balanceSource?: "platform" | "mining" | null;
   status: "pending" | "approved" | "completed" | "rejected" | "failed";
   createdAt: number;
   destinationAddress: string;
@@ -93,7 +95,11 @@ export function WithdrawReviewCard({ withdrawal, hotWalletAddress }: WithdrawRev
         <div>
           <p className="text-sm font-semibold">{withdrawal.userEmail ?? "Unknown user"}</p>
           <p className="text-xs text-muted-foreground">
-            Submitted {formatDate(withdrawal.createdAt)} • {withdrawal.destinationAddress}
+            Submitted {formatDate(withdrawal.createdAt)} •{" "}
+            {(withdrawal.balanceSource ?? "platform") === "mining"
+              ? "Mining earnings"
+              : "Platform wallet"}
+            • {withdrawal.destinationAddress}
           </p>
           {withdrawal.userNote ? (
             <p className="mt-1 text-xs text-muted-foreground">User note: {withdrawal.userNote}</p>

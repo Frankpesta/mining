@@ -31,6 +31,7 @@ export async function sendVerificationEmail({
   const emailHtml = await render(
     VerificationEmail({
       verificationUrl: url,
+      siteUrl: getAppBaseUrl(),
     }),
   );
 
@@ -63,6 +64,7 @@ export async function sendPasswordResetEmail({
   const emailHtml = await render(
     PasswordResetEmail({
       resetUrl: url,
+      siteUrl: getAppBaseUrl(),
     }),
   );
 

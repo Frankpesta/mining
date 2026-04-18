@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { verifyEmailDispatchSecret } from "@/lib/email/dispatch-secret";
 import { sendTicketReplyEmail } from "@/lib/email/tickets";
 
 export async function POST(request: NextRequest) {
+  if (!verifyEmailDispatchSecret(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
-    const { to, ticketSubject, ticketId, replyMessage, isAdminReply, userName } = body;
+    const {
+      to,
+      ticketSubject,
+      ticketId,
+      replyMessage,
+      isAdminReply,
+      userName,
+      alsoNotifyAdmins,
+    } = body;
 
-    if (!to || !ticketSubject || !ticketId || !replyMessage) {
+    if (!ticketSubject || !ticketId || !replyMessage) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 },
@@ -14,12 +28,13 @@ export async function POST(request: NextRequest) {
     }
 
     await sendTicketReplyEmail({
-      to,
+      to: typeof to === "string" ? to : "",
       ticketSubject,
       ticketId,
       replyMessage,
-      isAdminReply: isAdminReply ?? false,
+      isAdminReply: Boolean(isAdminReply),
       userName,
+      alsoNotifyAdmins: Boolean(alsoNotifyAdmins),
     });
 
     return NextResponse.json({ success: true });
@@ -31,4 +46,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

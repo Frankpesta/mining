@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import type { FunctionReturnType } from "convex/server";
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { api } from "./_generated/api";
 
@@ -22,6 +22,18 @@ export const getUserById = query({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
     return ctx.db.get(args.userId);
+  },
+});
+
+/** Emails only — not exposed publicly. */
+export const listAdminEmails = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const users = await ctx.db.query("users").collect();
+    return users
+      .filter((u) => u.role === "admin")
+      .map((u) => u.email.trim())
+      .filter(Boolean);
   },
 });
 

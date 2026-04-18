@@ -94,6 +94,10 @@ export default defineSchema({
 
   withdrawals: defineTable({
     userId: v.id("users"),
+    /** Which user wallet the funds were reserved from (refund goes back here). */
+    balanceSource: v.optional(
+      v.union(v.literal("platform"), v.literal("mining")),
+    ),
     crypto: v.union(
       v.literal("BTC"),
       v.literal("ETH"),

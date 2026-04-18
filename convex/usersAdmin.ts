@@ -2,6 +2,31 @@ import { ConvexError, v } from "convex/values";
 
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import {
+  patchMiningCoinBalance,
+  patchPlatformCoinBalance,
+  readMiningCoinBalance,
+  readPlatformCoinBalance,
+} from "./balanceHelpers";
+
+const ADMIN_BALANCE_CRYPTO = v.union(
+  v.literal("BTC"),
+  v.literal("ETH"),
+  v.literal("USDT"),
+  v.literal("USDC"),
+  v.literal("SOL"),
+  v.literal("LTC"),
+  v.literal("BNB"),
+  v.literal("ADA"),
+  v.literal("XRP"),
+  v.literal("DOGE"),
+  v.literal("DOT"),
+  v.literal("MATIC"),
+  v.literal("AVAX"),
+  v.literal("ATOM"),
+  v.literal("LINK"),
+  v.literal("UNI"),
+);
 
 export const listAllUsers = query({
   args: {
@@ -101,16 +126,12 @@ export const updateUserRole = mutation({
   },
 });
 
-export const adjustUserPlatformBalance = mutation({
+export const adjustUserBalance = mutation({
   args: {
     adminId: v.id("users"),
     userId: v.id("users"),
-    crypto: v.union(
-      v.literal("ETH"),
-      v.literal("BTC"),
-      v.literal("USDT"),
-      v.literal("USDC"),
-    ),
+    wallet: v.union(v.literal("platform"), v.literal("mining")),
+    crypto: ADMIN_BALANCE_CRYPTO,
     delta: v.number(),
     note: v.optional(v.string()),
   },
@@ -132,11 +153,19 @@ export const adjustUserPlatformBalance = mutation({
       throw new ConvexError("Adjustment amount cannot be zero");
     }
 
-    const key = args.crypto;
+    if (
+      args.wallet === "mining" &&
+      (args.crypto === "USDT" || args.crypto === "USDC")
+    ) {
+      throw new ConvexError(
+        "USDT and USDC live in the platform (deposit) wallet only. Switch wallet to Platform.",
+      );
+    }
+
     const current =
-      key === "BTC"
-        ? (user.platformBalance.BTC ?? 0)
-        : ((user.platformBalance[key] as number | undefined) ?? 0);
+      args.wallet === "platform"
+        ? readPlatformCoinBalance(user, args.crypto)
+        : readMiningCoinBalance(user, args.crypto);
 
     const next = current + args.delta;
     if (!Number.isFinite(next)) {
@@ -148,12 +177,15 @@ export const adjustUserPlatformBalance = mutation({
 
     const normalized = next < 1e-12 ? 0 : next;
 
-    await ctx.db.patch(args.userId, {
-      platformBalance: {
-        ...user.platformBalance,
-        [key]: normalized,
-      },
-    });
+    if (args.wallet === "platform") {
+      await ctx.db.patch(args.userId, {
+        platformBalance: patchPlatformCoinBalance(user, args.crypto, normalized),
+      });
+    } else {
+      await ctx.db.patch(args.userId, {
+        miningBalance: patchMiningCoinBalance(user, args.crypto, normalized),
+      });
+    }
 
     await ctx.db.insert("auditLogs", {
       actorId: args.adminId,
@@ -161,6 +193,7 @@ export const adjustUserPlatformBalance = mutation({
       entity: "user",
       entityId: args.userId,
       metadata: {
+        wallet: args.wallet,
         crypto: args.crypto,
         delta: args.delta,
         note: args.note,

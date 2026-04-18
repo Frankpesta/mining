@@ -1,7 +1,28 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import {
+  mutation,
+  query,
+  internalMutation,
+  internalQuery,
+} from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+
+export const getTicketForEmail = internalQuery({
+  args: { ticketId: v.id("tickets") },
+  handler: async (ctx, args) => {
+    const ticket = await ctx.db.get(args.ticketId);
+    if (!ticket) {
+      return null;
+    }
+    return {
+      email: ticket.email,
+      name: ticket.name,
+      subject: ticket.subject,
+      message: ticket.message,
+    };
+  },
+});
 
 // Create a ticket (from contact form or user dashboard)
 export const createTicket = mutation({
@@ -29,11 +50,9 @@ export const createTicket = mutation({
       updatedAt: now,
     });
 
-    // Create initial notification for admins (if user is logged in)
-    if (args.userId) {
-      // We'll create admin notifications via a separate mechanism
-      // For now, just return the ticket
-    }
+    await ctx.scheduler.runAfter(0, internal.emails.sendTicketCreatedEmail, {
+      ticketId,
+    });
 
     return ticketId;
   },
@@ -169,7 +188,7 @@ export const replyToTicket = mutation({
       updatedAt: Date.now(),
     });
 
-    // Create notification for the other party
+    // In-app notification for the other party (registered users only)
     const notificationUserId = args.isAdminReply ? ticket.userId : ticket.assignedTo;
     if (notificationUserId) {
       await ctx.scheduler.runAfter(0, internal.tickets.createNotification, {
@@ -179,19 +198,39 @@ export const replyToTicket = mutation({
         message: args.message.substring(0, 100) + (args.message.length > 100 ? "..." : ""),
         relatedId: args.ticketId,
       });
+    }
 
-      // Send email notification
-      const user = await ctx.db.get(notificationUserId);
-      if (user) {
+    const ticketIdStr = String(args.ticketId);
+
+    if (args.isAdminReply) {
+      let recipientEmail: string | null = null;
+      if (ticket.userId) {
+        const owner = await ctx.db.get(ticket.userId);
+        recipientEmail = owner?.email ?? ticket.email;
+      } else {
+        recipientEmail = ticket.email;
+      }
+      if (recipientEmail) {
         await ctx.scheduler.runAfter(0, internal.emails.sendTicketReplyEmail, {
-          to: ticket.email,
+          to: recipientEmail,
           ticketSubject: ticket.subject,
-          ticketId: args.ticketId,
+          ticketId: ticketIdStr,
           replyMessage: args.message,
-          isAdminReply: args.isAdminReply,
+          isAdminReply: true,
           userName: ticket.name,
+          alsoNotifyAdmins: false,
         });
       }
+    } else {
+      await ctx.scheduler.runAfter(0, internal.emails.sendTicketReplyEmail, {
+        to: "",
+        ticketSubject: ticket.subject,
+        ticketId: ticketIdStr,
+        replyMessage: args.message,
+        isAdminReply: false,
+        userName: ticket.name,
+        alsoNotifyAdmins: true,
+      });
     }
 
     return replyId;
@@ -236,7 +275,6 @@ export const updateTicketStatus = mutation({
 
     await ctx.db.patch(args.ticketId, updates);
 
-    // Create notification for user
     if (ticket.userId) {
       await ctx.scheduler.runAfter(0, internal.tickets.createNotification, {
         userId: ticket.userId,
@@ -245,18 +283,17 @@ export const updateTicketStatus = mutation({
         message: `Your ticket "${ticket.subject}" status has been updated to ${args.status}`,
         relatedId: args.ticketId,
       });
+    }
 
-      // Send email notification
-      const user = await ctx.db.get(ticket.userId);
-      if (user) {
-        await ctx.scheduler.runAfter(0, internal.emails.sendTicketStatusChangeEmail, {
-          to: ticket.email,
-          ticketSubject: ticket.subject,
-          ticketId: args.ticketId,
-          status: args.status,
-          userName: ticket.name,
-        });
-      }
+    if (ticket.email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendTicketStatusChangeEmail, {
+        to: ticket.email,
+        ticketSubject: ticket.subject,
+        ticketId: String(args.ticketId),
+        status: args.status,
+        userName: ticket.name,
+        alsoNotifyAdmins: true,
+      });
     }
   },
 });

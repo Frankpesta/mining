@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 
 
 export const getSetting = query({
@@ -25,6 +25,31 @@ export const getAllSettings = query({
       },
       {} as Record<string, unknown>,
     );
+  },
+});
+
+const EMAIL_TEMPLATE_DEFAULTS: Record<string, string> = {
+  emailDepositSubject: "Deposit Approved",
+  emailDepositBody: "Your deposit has been approved.",
+  emailWithdrawalSubject: "Withdrawal Processed",
+  emailWithdrawalBody: "Your withdrawal has been processed.",
+};
+
+/** Used when sending transactional emails from internal actions. */
+export const getEmailTemplateStrings = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const result = { ...EMAIL_TEMPLATE_DEFAULTS };
+    for (const key of Object.keys(EMAIL_TEMPLATE_DEFAULTS)) {
+      const row = await ctx.db
+        .query("platformSettings")
+        .withIndex("by_key", (q) => q.eq("key", key))
+        .first();
+      if (row?.value !== undefined && typeof row.value === "string" && row.value.trim()) {
+        result[key] = row.value;
+      }
+    }
+    return result;
   },
 });
 

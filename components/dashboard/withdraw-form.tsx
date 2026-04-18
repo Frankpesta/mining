@@ -26,30 +26,57 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { getWithdrawalFee } from "@/lib/payments/fees";
 
-type Crypto = "ETH" | "USDT" | "USDC" | "BTC";
+type BalanceSource = "platform" | "mining";
 
 type WithdrawFormProps = {
-  balances: Record<Crypto, number>;
+  platformBalances: Record<string, number>;
+  miningBalances: Record<string, number>;
 };
 
-const MINIMUMS: Record<Crypto, number> = {
+const PLATFORM_ORDER = ["ETH", "USDT", "USDC", "BTC"] as const;
+
+/** Minimum withdrawal amounts — extend as you add assets. */
+const MINIMUMS: Record<string, number> = {
   ETH: 0.01,
   USDT: 25,
   USDC: 25,
   BTC: 0.0001,
+  LTC: 0.01,
+  SOL: 0.01,
+  BNB: 0.001,
+  ADA: 1,
+  XRP: 1,
+  DOGE: 1,
+  DOT: 0.1,
+  MATIC: 1,
+  AVAX: 0.01,
+  ATOM: 0.01,
+  LINK: 0.1,
+  UNI: 0.1,
 };
 
-export function WithdrawForm({ balances }: WithdrawFormProps) {
+function minimumFor(crypto: string): number {
+  return MINIMUMS[crypto] ?? 0.001;
+}
+
+export function WithdrawForm({ platformBalances, miningBalances }: WithdrawFormProps) {
   const [isSubmitting, startSubmit] = useTransition();
-  const availableCryptos = (["ETH", "USDT", "USDC", "BTC"] as const).filter(
-    (asset) => balances[asset] !== undefined,
-  ) as Crypto[];
-  const defaultCrypto = availableCryptos[0] ?? "USDT";
+
+  const miningAssetList = useMemo(
+    () =>
+      Object.keys(miningBalances)
+        .filter((k) => miningBalances[k] > 0)
+        .sort(),
+    [miningBalances],
+  );
+
+  const miningDisabled = miningAssetList.length === 0;
 
   const form = useForm<WithdrawalRequestInput>({
     resolver: zodResolver(withdrawalRequestSchema),
     defaultValues: {
-      crypto: defaultCrypto,
+      balanceSource: "platform",
+      crypto: "USDT",
       amount: "",
       destinationAddress: "",
       requestedFee: "",
@@ -57,17 +84,43 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
     },
   });
 
-  const crypto = form.watch("crypto") as Crypto;
+  const balanceSource = form.watch("balanceSource") as BalanceSource;
+  const crypto = form.watch("crypto") as string;
   const rawAmount = form.watch("amount");
   const amount = Number(rawAmount) || 0;
-  const available = balances[crypto] ?? 0;
+
+  const available =
+    balanceSource === "platform"
+      ? platformBalances[crypto] ?? 0
+      : miningBalances[crypto] ?? 0;
+
   const networkFee = useMemo(() => getWithdrawalFee(crypto, amount), [crypto, amount]);
   const finalAmount = amount > networkFee ? amount - networkFee : 0;
-  const minimum = MINIMUMS[crypto] ?? 0;
+  const minimum = minimumFor(crypto);
 
   useEffect(() => {
     form.setValue("requestedFee", networkFee);
   }, [form, networkFee]);
+
+  useEffect(() => {
+    if (miningDisabled && balanceSource === "mining") {
+      form.setValue("balanceSource", "platform");
+    }
+  }, [miningDisabled, balanceSource, form]);
+
+  /** Keep crypto valid when switching balance source */
+  useEffect(() => {
+    if (balanceSource === "platform") {
+      const ok = PLATFORM_ORDER.some((c) => c === crypto);
+      if (!ok) {
+        form.setValue("crypto", PLATFORM_ORDER[0] ?? "USDT");
+      }
+    } else {
+      if (!miningAssetList.includes(crypto)) {
+        form.setValue("crypto", miningAssetList[0] ?? "BTC");
+      }
+    }
+  }, [balanceSource, crypto, miningAssetList, form]);
 
   async function handleSubmit(rawValues: WithdrawalRequestInput) {
     const parsed = withdrawalRequestSchema.safeParse(rawValues);
@@ -80,6 +133,11 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
       ...parsed.data,
       requestedFee: networkFee,
     };
+
+    if (balanceSource === "mining" && miningAssetList.length === 0) {
+      toast.error("No mining earnings available to withdraw.");
+      return;
+    }
 
     if (values.amount < minimum) {
       toast.error(`Minimum withdrawal for ${values.crypto} is ${minimum}.`);
@@ -98,6 +156,7 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
           `Withdrawal submitted. Estimated network fee ${response.fee} ${values.crypto}.`,
         );
         form.reset({
+          balanceSource: values.balanceSource,
           crypto: values.crypto,
           amount: "",
           destinationAddress: "",
@@ -115,6 +174,35 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
       <form className="space-y-5" onSubmit={form.handleSubmit(handleSubmit)}>
         <FormField
           control={form.control}
+          name="balanceSource"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Withdraw from</FormLabel>
+              <FormControl>
+                <select
+                  {...field}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <option value="platform">
+                    Platform (deposit) balance — ETH, USDT, USDC, BTC
+                  </option>
+                  <option value="mining" disabled={miningDisabled}>
+                    Mining earnings — BTC, ETH, LTC, …
+                    {miningDisabled ? " (no balance)" : ""}
+                  </option>
+                </select>
+              </FormControl>
+              <FormDescription>
+                Deposits and stablecoin rewards sit in your platform wallet. Accrued mining rewards
+                are tracked separately until you withdraw them from mining earnings.
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
           name="crypto"
           render={({ field }) => (
             <FormItem>
@@ -124,11 +212,17 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
                   {...field}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 >
-                  {availableCryptos.map((asset) => (
-                    <option key={asset} value={asset}>
-                      {asset} • Available {balances[asset].toLocaleString()}
-                    </option>
-                  ))}
+                  {balanceSource === "platform"
+                    ? PLATFORM_ORDER.map((asset) => (
+                        <option key={asset} value={asset}>
+                          {asset} • Available {(platformBalances[asset] ?? 0).toLocaleString()}
+                        </option>
+                      ))
+                    : miningAssetList.map((asset) => (
+                        <option key={asset} value={asset}>
+                          {asset} • Available {(miningBalances[asset] ?? 0).toLocaleString()}
+                        </option>
+                      ))}
                 </select>
               </FormControl>
               <FormDescription>
@@ -143,7 +237,8 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
           control={form.control}
           name="amount"
           render={({ field }) => {
-            const stringValue: string = typeof field.value === "string" ? field.value : (field.value?.toString() ?? "");
+            const stringValue: string =
+              typeof field.value === "string" ? field.value : (field.value?.toString() ?? "");
             return (
               <FormItem>
                 <FormLabel>Amount</FormLabel>
@@ -155,17 +250,19 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
                     max={available}
                     placeholder={`Enter amount in ${crypto}`}
                     value={stringValue}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      field.onChange(e.target.value)
+                    }
                     onBlur={field.onBlur}
                     name={field.name}
                     ref={field.ref}
                   />
-              </FormControl>
-              <FormDescription>
-                Available: {available.toLocaleString()} {crypto}
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
+                </FormControl>
+                <FormDescription>
+                  Available: {available.toLocaleString()} {crypto}
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
             );
           }}
         />
@@ -225,11 +322,17 @@ export function WithdrawForm({ balances }: WithdrawFormProps) {
           </p>
         </div>
 
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button
+          type="submit"
+          disabled={
+            isSubmitting ||
+            (balanceSource === "mining" && miningAssetList.length === 0)
+          }
+          className="w-full"
+        >
           {isSubmitting ? "Submitting…" : "Request withdrawal"}
         </Button>
       </form>
     </Form>
   );
 }
-

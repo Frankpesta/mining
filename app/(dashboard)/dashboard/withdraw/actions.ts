@@ -36,7 +36,8 @@ export async function submitWithdrawalRequest(values: WithdrawalRequestValues) {
   try {
     await convex.mutation(api.withdrawals.createWithdrawalRequest, {
       userId: current.user._id,
-      crypto: parsed.data.crypto,
+      balanceSource: parsed.data.balanceSource,
+      crypto: parsed.data.crypto as "BTC" | "ETH" | "USDT" | "USDC" | "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI",
       amount: parsed.data.amount,
       destinationAddress: parsed.data.destinationAddress,
       requestedFee: fee,

@@ -12,6 +12,10 @@ import {
 import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatDate } from "@/lib/utils";
+import {
+  collectMiningBalancesForWithdraw,
+  platformBalancesForWithdraw,
+} from "@/lib/wallet-balances";
 
 const CRYPTO_LABELS: Record<"ETH" | "USDT" | "USDC" | "BTC", string> = {
   ETH: "Ethereum",
@@ -32,20 +36,14 @@ export default async function WithdrawPage() {
     limit: 25,
   });
 
-  const platformBalances = current.user.platformBalance;
-  const withdrawBalances = {
-    ETH: platformBalances.ETH ?? 0,
-    USDT: platformBalances.USDT ?? 0,
-    USDC: platformBalances.USDC ?? 0,
-    BTC: platformBalances.BTC ?? 0,
-  };
+  const platformBalances = platformBalancesForWithdraw(current.user.platformBalance);
+  const miningBalances = collectMiningBalancesForWithdraw(current.user.miningBalance);
 
-  const displayBalances = [
-    ["ETH", withdrawBalances.ETH],
-    ["USDT", withdrawBalances.USDT],
-    ["USDC", withdrawBalances.USDC],
-    ["BTC", withdrawBalances.BTC],
-  ] as const;
+  const platformRows = (
+    Object.entries(platformBalances) as Array<[keyof typeof platformBalances, number]>
+  ).map(([currency, value]) => [currency, value] as const);
+
+  const miningRows = Object.entries(miningBalances).sort(([a], [b]) => a.localeCompare(b));
 
   return (
     <div className="space-y-6">
@@ -60,20 +58,54 @@ export default async function WithdrawPage() {
         <Card className="border-border/60 bg-card/80">
           <CardHeader>
             <CardTitle>Available balances</CardTitle>
-            <CardDescription>Balances eligible for withdrawal from your platform wallet.</CardDescription>
+            <CardDescription>
+              Choose platform (deposit) or mining earnings when you submit a withdrawal.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {displayBalances.map(([currency, value]) => (
-              <div key={currency} className="flex items-center justify-between rounded-md border border-border/50 px-3 py-2">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    {currency}
-                  </p>
-                  <p className="font-semibold">{CRYPTO_LABELS[currency]}</p>
-                </div>
-                <span className="font-medium tabular-nums">{value.toLocaleString()}</span>
+          <CardContent className="space-y-4 text-sm">
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Platform (deposit) wallet
+              </p>
+              <div className="space-y-2">
+                {platformRows.map(([currency, value]) => (
+                  <div
+                    key={currency}
+                    className="flex items-center justify-between rounded-md border border-border/50 px-3 py-2"
+                  >
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        {currency}
+                      </p>
+                      <p className="font-semibold">{CRYPTO_LABELS[currency as keyof typeof CRYPTO_LABELS]}</p>
+                    </div>
+                    <span className="font-medium tabular-nums">{value.toLocaleString()}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Mining earnings
+              </p>
+              {miningRows.length === 0 ? (
+                <p className="rounded-md border border-dashed border-border/60 px-3 py-2 text-muted-foreground">
+                  No mined balances yet.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {miningRows.map(([currency, value]) => (
+                    <div
+                      key={currency}
+                      className="flex items-center justify-between rounded-md border border-border/50 px-3 py-2"
+                    >
+                      <span className="font-medium">{currency}</span>
+                      <span className="tabular-nums">{value.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Payouts are processed manually by administrators. Status updates will appear below.
             </p>
@@ -88,7 +120,10 @@ export default async function WithdrawPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <WithdrawForm balances={withdrawBalances} />
+            <WithdrawForm
+              platformBalances={platformBalances}
+              miningBalances={miningBalances}
+            />
           </CardContent>
         </Card>
       </section>
@@ -114,6 +149,11 @@ export default async function WithdrawPage() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Requested {formatDate(withdrawal.createdAt)}
+                      {withdrawal.balanceSource === "mining"
+                        ? " • From mining earnings"
+                        : withdrawal.balanceSource === "platform" || withdrawal.balanceSource === undefined
+                          ? " • From platform wallet"
+                          : ""}
                     </p>
                   </div>
                   <StatusBadge status={withdrawal.status} />

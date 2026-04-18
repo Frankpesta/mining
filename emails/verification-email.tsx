@@ -1,120 +1,89 @@
 import {
-  Body,
   Button,
-  Container,
-  Head,
   Heading,
-  Html,
-  Link,
-  Preview,
   Section,
   Text,
 } from "@react-email/components";
 import * as React from "react";
 
+import { EmailLayout } from "./email-layout";
+
 interface VerificationEmailProps {
   verificationUrl: string;
+  siteUrl: string;
 }
 
-export const VerificationEmail = ({ verificationUrl }: VerificationEmailProps) => {
+export const VerificationEmail = ({
+  verificationUrl,
+  siteUrl,
+}: VerificationEmailProps) => {
   return (
-    <Html>
-      <Head />
-      <Preview>Confirm your email address to activate your blockhashpro account</Preview>
-      <Body style={main}>
-        <Container style={container}>
-          <Heading style={h1}>Welcome to blockhashpro</Heading>
-          
-          <Text style={text}>
-            Thank you for creating an account with blockhashpro. To complete your registration and start mining cryptocurrency, please confirm your email address.
-          </Text>
-
-          <Section style={buttonContainer}>
-            <Button style={button} href={verificationUrl}>
-              Confirm Email Address
-            </Button>
-          </Section>
-
-          <Text style={text}>
-            Or copy and paste this link into your browser:
-          </Text>
-          
-          <Text style={linkText}>
-            {verificationUrl}
-          </Text>
-
-          <Text style={footer}>
-            This confirmation link will expire in 60 minutes. If you didn't create an account with blockhashpro, you can safely ignore this email.
-          </Text>
-
-          <Text style={footer}>
-            Best regards,<br />
-            The blockhashpro Team
-          </Text>
-        </Container>
-      </Body>
-    </Html>
+    <EmailLayout
+      preview="Confirm your email to activate your blockhashpro account"
+      siteUrl={siteUrl}
+    >
+      <Heading style={h2}>Confirm your email</Heading>
+      <Text style={lead}>
+        Thank you for registering. Complete verification to access your dashboard
+        and mining features.
+      </Text>
+      <Section style={{ textAlign: "center" as const }}>
+        <Button href={verificationUrl} style={btn}>
+          Confirm email address
+        </Button>
+      </Section>
+      <Text style={muted}>Or paste this link into your browser:</Text>
+      <Text style={link}>{verificationUrl}</Text>
+      <Text style={footnote}>
+        This link expires in 60 minutes. If you did not sign up, you can ignore
+        this email.
+      </Text>
+    </EmailLayout>
   );
 };
 
 export default VerificationEmail;
 
-const main = {
-  backgroundColor: "#ffffff",
-  fontFamily:
-    '-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif',
+const h2 = {
+  color: "#0f172a",
+  fontSize: "20px",
+  fontWeight: "700",
+  margin: "0 0 14px",
 };
 
-const container = {
-  margin: "0 auto",
-  padding: "20px 0 48px",
-  maxWidth: "560px",
+const lead = {
+  color: "#475569",
+  fontSize: "15px",
+  lineHeight: "1.65",
+  margin: "0 0 22px",
 };
 
-const h1 = {
-  color: "#1f2937",
-  fontSize: "24px",
-  fontWeight: "600",
-  lineHeight: "1.3",
-  margin: "0 0 24px",
-};
-
-const text = {
-  color: "#4b5563",
-  fontSize: "16px",
-  lineHeight: "1.5",
-  margin: "0 0 16px",
-};
-
-const buttonContainer = {
-  margin: "32px 0",
-  textAlign: "center" as const,
-};
-
-const button = {
-  backgroundColor: "#2563eb",
-  borderRadius: "6px",
+const btn = {
+  backgroundColor: "#4f46e5",
+  borderRadius: "8px",
   color: "#ffffff",
-  fontSize: "16px",
+  fontSize: "14px",
   fontWeight: "600",
+  padding: "12px 28px",
   textDecoration: "none",
-  textAlign: "center" as const,
-  display: "inline-block",
-  padding: "12px 24px",
 };
 
-const linkText = {
-  color: "#2563eb",
-  fontSize: "14px",
-  lineHeight: "1.5",
-  margin: "0 0 24px",
+const muted = {
+  color: "#64748b",
+  fontSize: "13px",
+  margin: "28px 0 8px",
+};
+
+const link = {
+  color: "#4f46e5",
+  fontSize: "12px",
   wordBreak: "break-all" as const,
+  margin: "0 0 20px",
 };
 
-const footer = {
-  color: "#6b7280",
-  fontSize: "14px",
-  lineHeight: "1.5",
-  margin: "16px 0 0",
+const footnote = {
+  color: "#94a3b8",
+  fontSize: "12px",
+  lineHeight: "1.55",
+  margin: "0",
 };
-

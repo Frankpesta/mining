@@ -21,35 +21,86 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/components/ui/use-toast";
-import { adjustUserPlatformBalance } from "@/app/(admin)/admin/users/actions";
+import {
+  adjustUserBalance,
+  type AdjustableCrypto,
+  type AdjustableWallet,
+} from "@/app/(admin)/admin/users/actions";
 import { ArrowDownLeft, ArrowUpRight, Wallet } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 
-const ASSETS = ["USDC", "USDT", "ETH", "BTC"] as const;
-type PlatformCrypto = (typeof ASSETS)[number];
+const WALLET_OPTIONS: { value: AdjustableWallet; label: string; hint: string }[] = [
+  {
+    value: "platform",
+    label: "Platform (deposit) wallet",
+    hint: "ETH, USDT, USDC, BTC and other platform balances",
+  },
+  {
+    value: "mining",
+    label: "Mining earnings wallet",
+    hint: "BTC, ETH, LTC and tracked mining rewards (not USDT/USDC)",
+  },
+];
+
+const ALL_CRYPTOS: AdjustableCrypto[] = [
+  "USDC",
+  "USDT",
+  "ETH",
+  "BTC",
+  "SOL",
+  "LTC",
+  "BNB",
+  "ADA",
+  "XRP",
+  "DOGE",
+  "DOT",
+  "MATIC",
+  "AVAX",
+  "ATOM",
+  "LINK",
+  "UNI",
+];
+
+function cryptosForWallet(wallet: AdjustableWallet): AdjustableCrypto[] {
+  if (wallet === "mining") {
+    return ALL_CRYPTOS.filter((c) => c !== "USDT" && c !== "USDC");
+  }
+  return ALL_CRYPTOS;
+}
+
+function stepForAsset(a: AdjustableCrypto): string {
+  if (a === "BTC") return "0.00000001";
+  if (a === "ETH") return "0.000001";
+  return "0.01";
+}
 
 type AdminUserBalanceAdjustProps = {
   userId: Id<"users">;
   userEmail: string;
 };
 
-function stepForAsset(a: PlatformCrypto): string {
-  if (a === "BTC") return "0.00000001";
-  if (a === "ETH") return "0.000001";
-  return "0.01";
-}
-
 export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAdjustProps) {
   const router = useRouter();
   const [mode, setMode] = useState<"add" | "subtract">("add");
-  const [asset, setAsset] = useState<PlatformCrypto>("USDC");
+  const [wallet, setWallet] = useState<AdjustableWallet>("platform");
+  const [asset, setAsset] = useState<AdjustableCrypto>("USDC");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
 
+  const allowedCryptos = cryptosForWallet(wallet);
+
   function resetForm() {
     setAmount("");
     setNote("");
+  }
+
+  function handleWalletChange(w: AdjustableWallet) {
+    setWallet(w);
+    const next = cryptosForWallet(w);
+    if (!next.includes(asset)) {
+      setAsset(next[0] ?? "BTC");
+    }
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -61,8 +112,9 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
     }
 
     start(async () => {
-      const result = await adjustUserPlatformBalance({
+      const result = await adjustUserBalance({
         userId,
+        wallet,
         crypto: asset,
         amount: n,
         direction: mode,
@@ -74,8 +126,8 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
       }
       toast.success(
         mode === "add"
-          ? `Added ${n} ${asset} to the account.`
-          : `Removed ${n} ${asset} from the account.`,
+          ? `Added ${n} ${asset} to ${wallet === "platform" ? "platform" : "mining"} balance.`
+          : `Removed ${n} ${asset} from ${wallet === "platform" ? "platform" : "mining"} balance.`,
       );
       resetForm();
       router.refresh();
@@ -91,10 +143,10 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
               <Wallet className="h-5 w-5" />
             </div>
             <div>
-              <CardTitle className="text-lg">Adjust platform balance</CardTitle>
+              <CardTitle className="text-lg">Adjust user balances</CardTitle>
               <CardDescription className="mt-1 max-w-xl">
-                Credit or debit this user&apos;s wallet balances in native units (e.g. USDC amount for
-                USDC). Changes are recorded in the audit log.
+                Credit or debit the platform (deposit) wallet or the mining earnings wallet. Amounts
+                are in native asset units. USDT/USDC apply only to the platform wallet.
               </CardDescription>
             </div>
           </div>
@@ -130,16 +182,37 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
 
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="space-y-2">
+              <Label htmlFor="balance-wallet">Wallet</Label>
+              <Select
+                value={wallet}
+                onValueChange={(v) => handleWalletChange(v as AdjustableWallet)}
+              >
+                <SelectTrigger id="balance-wallet" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {WALLET_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      <span className="font-medium">{o.label}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                {WALLET_OPTIONS.find((w) => w.value === wallet)?.hint}
+              </p>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="balance-asset">Asset</Label>
               <Select
                 value={asset}
-                onValueChange={(v) => setAsset(v as PlatformCrypto)}
+                onValueChange={(v) => setAsset(v as AdjustableCrypto)}
               >
                 <SelectTrigger id="balance-asset" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ASSETS.map((a) => (
+                  {allowedCryptos.map((a) => (
                     <SelectItem key={a} value={a}>
                       {a}
                     </SelectItem>
@@ -147,7 +220,7 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="balance-amount">Amount ({asset})</Label>
               <Input
                 id="balance-amount"
@@ -155,10 +228,12 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
                 inputMode="decimal"
                 step={stepForAsset(asset)}
                 min={0}
-                placeholder={asset === "BTC" ? "0.00000000" : asset === "ETH" ? "0.00" : "0.00"}
+                placeholder={
+                  asset === "BTC" ? "0.00000000" : asset === "ETH" ? "0.00" : "0.00"
+                }
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="font-mono tabular-nums"
+                className="font-mono tabular-nums max-w-md"
               />
             </div>
           </div>
@@ -179,7 +254,11 @@ export function AdminUserBalanceAdjust({ userId, userEmail }: AdminUserBalanceAd
             <Button type="button" variant="outline" onClick={resetForm} disabled={pending}>
               Clear
             </Button>
-            <Button type="submit" disabled={pending} variant={mode === "subtract" ? "destructive" : "default"}>
+            <Button
+              type="submit"
+              disabled={pending}
+              variant={mode === "subtract" ? "destructive" : "default"}
+            >
               {pending
                 ? "Applying…"
                 : mode === "add"

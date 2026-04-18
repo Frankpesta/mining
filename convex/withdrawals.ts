@@ -1,8 +1,15 @@
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Id, Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
+import {
+  patchMiningCoinBalance,
+  patchPlatformCoinBalance,
+  readMiningCoinBalance,
+  readPlatformCoinBalance,
+} from "./balanceHelpers";
 
 type SupportedCrypto = 
   | "BTC"
@@ -55,6 +62,9 @@ const calculateNetworkFee = (crypto: string, amount: number) => {
 export const createWithdrawalRequest = mutation({
   args: {
     userId: v.id("users"),
+    balanceSource: v.optional(
+      v.union(v.literal("platform"), v.literal("mining")),
+    ),
     crypto: v.union(
       v.literal("BTC"),
       v.literal("ETH"),
@@ -83,25 +93,33 @@ export const createWithdrawalRequest = mutation({
       throw new ConvexError("Withdrawal amount must be greater than zero");
     }
 
+    const balanceSource = args.balanceSource ?? "platform";
+
+    if (
+      balanceSource === "mining" &&
+      (args.crypto === "USDT" || args.crypto === "USDC")
+    ) {
+      throw new ConvexError(
+        "USDT and USDC are only in your platform (deposit) wallet. Switch balance source to Platform.",
+      );
+    }
+
     const user = await ctx.db.get(args.userId);
     if (!user) {
       throw new ConvexError("User not found");
     }
 
-    // Get current balance - handle both required and optional fields
-    let currentBalance = 0;
-    if (args.crypto === "ETH" || args.crypto === "USDT" || args.crypto === "USDC") {
-      currentBalance = user.platformBalance[args.crypto] ?? 0;
-    } else if (args.crypto === "BTC") {
-      currentBalance = user.platformBalance.BTC ?? 0;
-    } else {
-      // For optional coins, check if they exist in platformBalance
-      const optionalCoin = args.crypto as "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
-      currentBalance = (user.platformBalance[optionalCoin] as number | undefined) ?? 0;
-    }
-    
+    const currentBalance =
+      balanceSource === "platform"
+        ? readPlatformCoinBalance(user, args.crypto)
+        : readMiningCoinBalance(user, args.crypto);
+
     if (currentBalance < args.amount) {
-      throw new ConvexError("Insufficient platform balance");
+      throw new ConvexError(
+        balanceSource === "platform"
+          ? "Insufficient platform balance"
+          : "Insufficient mining balance",
+      );
     }
 
     const networkFee = args.requestedFee ?? calculateNetworkFee(args.crypto, args.amount);
@@ -111,34 +129,21 @@ export const createWithdrawalRequest = mutation({
 
     const finalAmount = args.amount - networkFee;
 
-    // Update balance based on crypto type
-    if (args.crypto === "ETH" || args.crypto === "USDT" || args.crypto === "USDC") {
+    const nextBalance = currentBalance - args.amount;
+
+    if (balanceSource === "platform") {
       await ctx.db.patch(user._id, {
-        platformBalance: {
-          ...user.platformBalance,
-          [args.crypto]: currentBalance - args.amount,
-        },
-      });
-    } else if (args.crypto === "BTC") {
-      await ctx.db.patch(user._id, {
-        platformBalance: {
-          ...user.platformBalance,
-          BTC: currentBalance - args.amount,
-        },
+        platformBalance: patchPlatformCoinBalance(user, args.crypto, nextBalance),
       });
     } else {
-      // Handle optional coins
-      const optionalCoin = args.crypto as "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
       await ctx.db.patch(user._id, {
-        platformBalance: {
-          ...user.platformBalance,
-          [optionalCoin]: currentBalance - args.amount,
-        },
+        miningBalance: patchMiningCoinBalance(user, args.crypto, nextBalance),
       });
     }
 
     const withdrawalId = await ctx.db.insert("withdrawals", {
       userId: args.userId,
+      balanceSource,
       crypto: args.crypto,
       amount: args.amount,
       destinationAddress: args.destinationAddress,
@@ -161,12 +166,24 @@ export const createWithdrawalRequest = mutation({
       metadata: {
         amount: args.amount,
         crypto: args.crypto,
+        balanceSource,
         destination: args.destinationAddress,
       },
       createdAt: Date.now(),
     });
 
+    await ctx.scheduler.runAfter(0, internal.emails.sendWithdrawalRequestedEmail, {
+      withdrawalId,
+    });
+
     return withdrawalId;
+  },
+});
+
+export const getWithdrawalById = internalQuery({
+  args: { withdrawalId: v.id("withdrawals") },
+  handler: async (ctx, args) => {
+    return ctx.db.get(args.withdrawalId);
   },
 });
 
@@ -262,30 +279,24 @@ export const updateWithdrawalStatus = mutation({
     }
 
     if (args.status === "rejected" || args.status === "failed") {
-      // Refund the withdrawal amount back to user's platform balance
-      if (withdrawal.crypto === "ETH" || withdrawal.crypto === "USDT" || withdrawal.crypto === "USDC") {
+      const refundSource = withdrawal.balanceSource ?? "platform";
+      if (refundSource === "mining") {
+        const cur = readMiningCoinBalance(user, withdrawal.crypto);
         await ctx.db.patch(user._id, {
-          platformBalance: {
-            ...user.platformBalance,
-            [withdrawal.crypto]: user.platformBalance[withdrawal.crypto] + withdrawal.amount,
-          },
-        });
-      } else if (withdrawal.crypto === "BTC") {
-        await ctx.db.patch(user._id, {
-          platformBalance: {
-            ...user.platformBalance,
-            BTC: (user.platformBalance.BTC ?? 0) + withdrawal.amount,
-          },
+          miningBalance: patchMiningCoinBalance(
+            user,
+            withdrawal.crypto,
+            cur + withdrawal.amount,
+          ),
         });
       } else {
-        // Handle optional coins
-        const optionalCoin = withdrawal.crypto as "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI";
-        const currentBalance = (user.platformBalance[optionalCoin] as number | undefined) ?? 0;
+        const cur = readPlatformCoinBalance(user, withdrawal.crypto);
         await ctx.db.patch(user._id, {
-          platformBalance: {
-            ...user.platformBalance,
-            [optionalCoin]: currentBalance + withdrawal.amount,
-          },
+          platformBalance: patchPlatformCoinBalance(
+            user,
+            withdrawal.crypto,
+            cur + withdrawal.amount,
+          ),
         });
       }
     }
@@ -318,6 +329,13 @@ export const updateWithdrawalStatus = mutation({
         userId: withdrawal.userId,
       },
       createdAt: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(0, internal.emails.sendWithdrawalStatusEmail, {
+      withdrawalId: args.withdrawalId,
+      status: args.status,
+      adminNote: args.adminNote,
+      txHash: args.txHash,
     });
   },
 });
