@@ -77,11 +77,17 @@ type PlanCardProps = {
 
 function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
   const [isPurchasing, startPurchase] = useTransition();
-  const [fundingSource, setFundingSource] = useState<"platform" | "mining">(
-    "platform",
-  );
-  const walletUsd = fundingSource === "platform" ? platformUsd : miningUsd;
   const minEntry = plan.minPriceUSD ?? plan.priceUSD;
+  const canAffordPlatform = platformUsd >= minEntry;
+  const canAffordMining = miningUsd >= minEntry;
+  /** Either wallet can cover min — required so the CTA stays enabled when only mined balance qualifies. */
+  const canStartPurchase = canAffordPlatform || canAffordMining;
+
+  const [fundingSource, setFundingSource] = useState<"platform" | "mining">(() =>
+    canAffordPlatform ? "platform" : canAffordMining ? "mining" : "platform",
+  );
+
+  const walletUsd = fundingSource === "platform" ? platformUsd : miningUsd;
   const roi = plan.dailyRoiPercent;
   const canAfford = walletUsd >= minEntry;
   const displayDailyUsd =
@@ -170,7 +176,7 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
             <Button
               className="w-full rounded-full py-6 text-base font-bold uppercase"
               size="lg"
-              disabled={!canAfford || isPurchasing || roi === undefined}
+              disabled={!canStartPurchase || isPurchasing || roi === undefined}
             >
               {isPurchasing ? "Processing…" : "Get this"}
             </Button>
