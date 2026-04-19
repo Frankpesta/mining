@@ -11,6 +11,7 @@ export async function purchasePlan(input: {
   userId: Id<"users">;
   planId: Id<"plans">;
   coin: string;
+  fundingSource?: "platform" | "mining";
 }) {
   const current = await getCurrentUser();
   if (!current || current.user._id !== input.userId) {
@@ -18,7 +19,12 @@ export async function purchasePlan(input: {
   }
 
   const convex = getConvexClient();
-  await convex.mutation(api.plans.purchasePlan, input);
+  await convex.mutation(api.plans.purchasePlan, {
+    userId: input.userId,
+    planId: input.planId,
+    coin: input.coin,
+    ...(input.fundingSource ? { fundingSource: input.fundingSource } : {}),
+  });
 
   revalidatePath("/dashboard/mining-packages");
   revalidatePath("/dashboard");

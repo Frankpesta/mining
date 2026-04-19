@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -43,13 +43,18 @@ function formatContractLabel(days: number): string {
   return `${days}-day mining contract`;
 }
 
-function commitmentSummary(plan: Plan): string {
+function commitmentSummary(
+  plan: Plan,
+  source: "platform" | "mining",
+): string {
   const min = plan.minPriceUSD ?? plan.priceUSD;
   const max = plan.maxPriceUSD;
+  const wallet =
+    source === "platform" ? "platform wallet" : "mined balance (approx. USD)";
   if (max !== undefined) {
-    return `Uses your full balance from ${formatCurrency(min)} up to ${formatCurrency(max)}.`;
+    return `Commits from your ${wallet} from ${formatCurrency(min)} up to ${formatCurrency(max)}.`;
   }
-  return `Uses your full balance from ${formatCurrency(min)} (no upper cap).`;
+  return `Commits from your ${wallet} from ${formatCurrency(min)} (no upper cap).`;
 }
 
 function HeroPrice({ amount }: { amount: number }) {
@@ -66,24 +71,33 @@ function HeroPrice({ amount }: { amount: number }) {
 type PlanCardProps = {
   plan: Plan;
   userId: string;
-  userBalance: number;
+  platformUsd: number;
+  miningUsd: number;
 };
 
-function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
+function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
   const [isPurchasing, startPurchase] = useTransition();
+  const [fundingSource, setFundingSource] = useState<"platform" | "mining">(
+    "platform",
+  );
+  const walletUsd = fundingSource === "platform" ? platformUsd : miningUsd;
   const minEntry = plan.minPriceUSD ?? plan.priceUSD;
   const roi = plan.dailyRoiPercent;
-  const canAfford = userBalance >= minEntry;
+  const canAfford = walletUsd >= minEntry;
   const displayDailyUsd =
     roi !== undefined && roi > 0 ? (roi / 100) * plan.priceUSD : 0;
   const committedAmount =
     plan.maxPriceUSD !== undefined
-      ? Math.min(userBalance, plan.maxPriceUSD)
-      : userBalance;
+      ? Math.min(walletUsd, plan.maxPriceUSD)
+      : walletUsd;
 
   const handlePurchase = (coin: string) => {
     if (!canAfford) {
-      toast.error(`You need at least ${formatCurrency(minEntry)} in your platform wallet.`);
+      const label =
+        fundingSource === "platform" ? "platform wallet" : "mined balance";
+      toast.error(
+        `You need at least ${formatCurrency(minEntry)} available in your ${label} (approx. USD for mined funds).`,
+      );
       return;
     }
 
@@ -93,8 +107,11 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
           userId: userId as Id<"users">,
           planId: plan._id as Id<"plans">,
           coin,
+          fundingSource,
         });
-        toast.success(`${plan.name} started. Your balance was committed to this contract.`);
+        toast.success(
+          `${plan.name} started. Funds were committed from your ${fundingSource === "platform" ? "platform wallet" : "mined earnings"}.`,
+        );
       } catch (error) {
         toast.error(error instanceof Error ? error.message : "Failed to purchase mining package");
       }
@@ -162,14 +179,43 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
             <DialogHeader>
               <DialogTitle>Purchase {plan.name}</DialogTitle>
               <DialogDescription>
-                {commitmentSummary(plan)} Choose which asset you want credited for daily rewards.
+                {commitmentSummary(plan, fundingSource)} Choose which asset you want credited for
+                daily rewards.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              <div>
+                <p className="mb-2 text-sm font-semibold">Pay from</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="button"
+                    variant={fundingSource === "platform" ? "default" : "outline"}
+                    className="w-full"
+                    onClick={() => setFundingSource("platform")}
+                  >
+                    Platform wallet
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={fundingSource === "mining" ? "default" : "outline"}
+                    className="w-full"
+                    onClick={() => setFundingSource("mining")}
+                  >
+                    Mined earnings
+                  </Button>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {fundingSource === "platform"
+                    ? "Uses your deposit / USD-like platform balance only."
+                    : "Reinvests using your mining wallet. Amounts use the same reference rates as the dashboard."}
+                </p>
+              </div>
               <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Your wallet (USD-like)</span>
-                  <span className="font-semibold">{formatCurrency(userBalance)}</span>
+                  <span className="text-muted-foreground">
+                    {fundingSource === "platform" ? "Platform (USD-like)" : "Mined (approx. USD)"}
+                  </span>
+                  <span className="font-semibold">{formatCurrency(walletUsd)}</span>
                 </div>
                 <div className="mt-2 flex justify-between">
                   <span className="text-muted-foreground">Committed amount</span>
@@ -210,10 +256,16 @@ function PlanCard({ plan, userId, userBalance }: PlanCardProps) {
 type PlansMarketplaceProps = {
   plans: Plan[];
   userId: string;
-  userBalance: number;
+  platformUsd: number;
+  miningUsd: number;
 };
 
-export function PlansMarketplace({ plans, userId, userBalance }: PlansMarketplaceProps) {
+export function PlansMarketplace({
+  plans,
+  userId,
+  platformUsd,
+  miningUsd,
+}: PlansMarketplaceProps) {
   if (plans.length === 0) {
     return (
       <Card className="border-border/60 bg-card/80">
@@ -227,7 +279,13 @@ export function PlansMarketplace({ plans, userId, userBalance }: PlansMarketplac
   return (
     <div className="mx-auto grid max-w-lg gap-8 sm:max-w-none sm:grid-cols-2 sm:gap-6 lg:max-w-5xl">
       {plans.map((plan) => (
-        <PlanCard key={plan._id} plan={plan} userId={userId} userBalance={userBalance} />
+        <PlanCard
+          key={plan._id}
+          plan={plan}
+          userId={userId}
+          platformUsd={platformUsd}
+          miningUsd={miningUsd}
+        />
       ))}
     </div>
   );

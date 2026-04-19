@@ -4,6 +4,10 @@ import { mutation, query, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { resolveEarningTierForPlan } from "./earningTiers";
 import {
+  approximateMiningBalanceUsd,
+  deductUsdFromMiningBalance,
+} from "./miningBalanceUsd";
+import {
   deductUsdLikeFromPlatformBalance,
   totalUsdLikePlatformBalance,
 } from "./platformBalanceUsd";
@@ -181,6 +185,8 @@ export const purchasePlan = mutation({
     userId: v.id("users"),
     planId: v.id("plans"),
     coin: v.string(),
+    /** Platform (deposit) wallet vs mined earnings — user chooses; default platform. */
+    fundingSource: v.optional(v.union(v.literal("platform"), v.literal("mining"))),
   },
   handler: async (ctx, args) => {
     const [user, plan] = await Promise.all([
@@ -209,12 +215,20 @@ export const purchasePlan = mutation({
       throw new ConvexError(`Coin ${args.coin} is not supported by this plan`);
     }
 
-    const totalBalance = totalUsdLikePlatformBalance(user);
+    const fundingSource = args.fundingSource ?? "platform";
+    const totalPlatformUsd = totalUsdLikePlatformBalance(user);
+    const totalMiningUsd = approximateMiningBalanceUsd(user);
+    const totalBalance =
+      fundingSource === "mining" ? totalMiningUsd : totalPlatformUsd;
 
     // Use minPriceUSD as minimum, or priceUSD if minPriceUSD doesn't exist (backward compatibility)
     const minPrice = plan.minPriceUSD ?? plan.priceUSD;
     if (totalBalance < minPrice) {
-      throw new ConvexError(`Insufficient platform balance. Minimum required: $${minPrice.toFixed(2)}`);
+      const label =
+        fundingSource === "mining" ? "mined balance" : "platform balance";
+      throw new ConvexError(
+        `Insufficient ${label}. Minimum required: $${minPrice.toFixed(2)}`,
+      );
     }
 
     // Determine purchase amount
@@ -266,7 +280,11 @@ export const purchasePlan = mutation({
       createdAt: now,
     });
 
-    await deductUsdLikeFromPlatformBalance(ctx, user, purchaseAmount);
+    if (fundingSource === "mining") {
+      await deductUsdFromMiningBalance(ctx, user, purchaseAmount);
+    } else {
+      await deductUsdLikeFromPlatformBalance(ctx, user, purchaseAmount);
+    }
 
     await ctx.db.insert("auditLogs", {
       actorId: args.userId,
@@ -279,6 +297,7 @@ export const purchasePlan = mutation({
         coin: args.coin,
         purchaseAmount,
         priceUSD: plan.priceUSD,
+        fundingSource,
       },
       createdAt: now,
     });
