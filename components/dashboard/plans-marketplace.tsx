@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -51,10 +53,11 @@ function commitmentSummary(
   const max = plan.maxPriceUSD;
   const wallet =
     source === "platform" ? "platform wallet" : "mined balance (approx. USD)";
-  if (max !== undefined) {
-    return `Commits from your ${wallet} from ${formatCurrency(min)} up to ${formatCurrency(max)}.`;
-  }
-  return `Commits from your ${wallet} from ${formatCurrency(min)} (no upper cap).`;
+  const range =
+    max !== undefined
+      ? `between ${formatCurrency(min)} and ${formatCurrency(max)}`
+      : `at least ${formatCurrency(min)}`;
+  return `Choose how much USD to commit from your ${wallet} (${range}), then pick BTC or ETH for rewards.`;
 }
 
 function HeroPrice({ amount }: { amount: number }) {
@@ -90,12 +93,38 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
   const walletUsd = fundingSource === "platform" ? platformUsd : miningUsd;
   const roi = plan.dailyRoiPercent;
   const canAfford = walletUsd >= minEntry;
+
+  const maxCommit = useMemo(() => {
+    if (plan.maxPriceUSD !== undefined) {
+      return Math.min(walletUsd, plan.maxPriceUSD);
+    }
+    return walletUsd;
+  }, [walletUsd, plan.maxPriceUSD]);
+
+  const [commitUsd, setCommitUsd] = useState(minEntry);
+
+  useEffect(() => {
+    if (maxCommit >= minEntry) {
+      setCommitUsd(maxCommit);
+    } else {
+      setCommitUsd(minEntry);
+    }
+  }, [maxCommit, minEntry, fundingSource]);
+
+  const commitValid =
+    canAfford &&
+    Number.isFinite(commitUsd) &&
+    (commitUsd as number) + 1e-9 >= minEntry &&
+    (commitUsd as number) <= maxCommit + 1e-6;
+
+  const estDailyOnCommit =
+    roi !== undefined &&
+    roi > 0 &&
+    Number.isFinite(commitUsd)
+      ? (roi / 100) * (commitUsd as number)
+      : 0;
   const displayDailyUsd =
     roi !== undefined && roi > 0 ? (roi / 100) * plan.priceUSD : 0;
-  const committedAmount =
-    plan.maxPriceUSD !== undefined
-      ? Math.min(walletUsd, plan.maxPriceUSD)
-      : walletUsd;
 
   const handlePurchase = (coin: string) => {
     if (!canAfford) {
@@ -106,6 +135,14 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
       );
       return;
     }
+    if (!commitValid) {
+      toast.error(
+        `Enter an amount between ${formatCurrency(minEntry)} and ${formatCurrency(maxCommit)}.`,
+      );
+      return;
+    }
+
+    const principal = Math.round(commitUsd * 100) / 100;
 
     startPurchase(async () => {
       try {
@@ -114,6 +151,7 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
           planId: plan._id as Id<"plans">,
           coin,
           fundingSource,
+          commitAmountUsd: principal,
         });
         toast.success(
           `${plan.name} started. Funds were committed from your ${fundingSource === "platform" ? "platform wallet" : "mined earnings"}.`,
@@ -184,10 +222,7 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Purchase {plan.name}</DialogTitle>
-              <DialogDescription>
-                {commitmentSummary(plan, fundingSource)} Choose which asset you want credited for
-                daily rewards.
-              </DialogDescription>
+              <DialogDescription>{commitmentSummary(plan, fundingSource)}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -216,6 +251,45 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
                     : "Reinvests using your mining wallet. Amounts use the same reference rates as the dashboard."}
                 </p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor={`commit-${plan._id}`}>Amount to commit (USD)</Label>
+                <Input
+                  id={`commit-${plan._id}`}
+                  type="number"
+                  inputMode="decimal"
+                  min={minEntry}
+                  max={maxCommit}
+                  step="0.01"
+                  value={Number.isFinite(commitUsd) ? String(commitUsd) : ""}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      setCommitUsd(NaN);
+                      return;
+                    }
+                    const v = parseFloat(raw);
+                    setCommitUsd(Number.isFinite(v) ? v : NaN);
+                  }}
+                  onBlur={() => {
+                    if (!Number.isFinite(commitUsd)) {
+                      setCommitUsd(maxCommit >= minEntry ? maxCommit : minEntry);
+                      return;
+                    }
+                    const clamped = Math.min(
+                      maxCommit,
+                      Math.max(minEntry, commitUsd as number),
+                    );
+                    setCommitUsd(Math.round(clamped * 100) / 100);
+                  }}
+                  disabled={!canAfford}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Min {formatCurrency(minEntry)}
+                  {plan.maxPriceUSD !== undefined
+                    ? ` · max ${formatCurrency(maxCommit)} (plan cap and your balance)`
+                    : ` · up to ${formatCurrency(maxCommit)} available`}
+                </p>
+              </div>
               <div className="rounded-lg border border-border/60 bg-muted/40 p-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">
@@ -224,8 +298,14 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
                   <span className="font-semibold">{formatCurrency(walletUsd)}</span>
                 </div>
                 <div className="mt-2 flex justify-between">
-                  <span className="text-muted-foreground">Committed amount</span>
-                  <span className="font-semibold">{formatCurrency(committedAmount)}</span>
+                  <span className="text-muted-foreground">Your commitment</span>
+                  <span className="font-semibold">
+                    {Number.isFinite(commitUsd) ? formatCurrency(commitUsd as number) : "—"}
+                  </span>
+                </div>
+                <div className="mt-2 flex justify-between">
+                  <span className="text-muted-foreground">Est. daily (on commitment)</span>
+                  <span className="font-semibold">{formatCurrency(estDailyOnCommit)}</span>
                 </div>
                 <div className="mt-2 flex justify-between">
                   <span className="text-muted-foreground">Daily ROI</span>
@@ -241,7 +321,7 @@ function PlanCard({ plan, userId, platformUsd, miningUsd }: PlanCardProps) {
                       variant="outline"
                       className="w-full"
                       onClick={() => handlePurchase(coin)}
-                      disabled={isPurchasing || !canAfford}
+                      disabled={isPurchasing || !commitValid}
                     >
                       {coin}
                     </Button>

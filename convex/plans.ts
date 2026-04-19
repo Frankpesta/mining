@@ -187,6 +187,8 @@ export const purchasePlan = mutation({
     coin: v.string(),
     /** Platform (deposit) wallet vs mined earnings — user chooses; default platform. */
     fundingSource: v.optional(v.union(v.literal("platform"), v.literal("mining"))),
+    /** USD principal to commit (must be within plan min/max and wallet). If omitted, uses full wallet up to max. */
+    commitAmountUsd: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const [user, plan] = await Promise.all([
@@ -231,12 +233,34 @@ export const purchasePlan = mutation({
       );
     }
 
-    // Determine purchase amount
-    // If maxPriceUSD is set and user has more than max, use max
-    // Otherwise, use the user's total balance (as long as it's >= min)
-    let purchaseAmount = totalBalance;
-    if (plan.maxPriceUSD !== undefined && totalBalance > plan.maxPriceUSD) {
-      purchaseAmount = plan.maxPriceUSD;
+    const maxCap =
+      plan.maxPriceUSD !== undefined
+        ? Math.min(totalBalance, plan.maxPriceUSD)
+        : totalBalance;
+
+    let purchaseAmount: number;
+    if (args.commitAmountUsd !== undefined) {
+      purchaseAmount = args.commitAmountUsd;
+      if (!Number.isFinite(purchaseAmount) || purchaseAmount <= 0) {
+        throw new ConvexError("Enter a valid commitment amount in USD.");
+      }
+      if (purchaseAmount < minPrice - 1e-6) {
+        throw new ConvexError(
+          `Minimum commitment is $${minPrice.toFixed(2)} for this plan.`,
+        );
+      }
+      if (plan.maxPriceUSD !== undefined && purchaseAmount > plan.maxPriceUSD + 1e-6) {
+        throw new ConvexError(
+          `Maximum commitment for this plan is $${plan.maxPriceUSD.toFixed(2)}.`,
+        );
+      }
+      if (purchaseAmount > totalBalance + 1e-6) {
+        throw new ConvexError(
+          "That amount exceeds your available balance for the selected wallet.",
+        );
+      }
+    } else {
+      purchaseAmount = maxCap;
     }
 
     const now = Date.now();
@@ -298,6 +322,7 @@ export const purchasePlan = mutation({
         purchaseAmount,
         priceUSD: plan.priceUSD,
         fundingSource,
+        commitAmountUsd: args.commitAmountUsd,
       },
       createdAt: now,
     });

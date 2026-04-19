@@ -12,6 +12,8 @@ export async function purchasePlan(input: {
   planId: Id<"plans">;
   coin: string;
   fundingSource?: "platform" | "mining";
+  /** USD principal to commit (required from UI for explicit recommit amount). */
+  commitAmountUsd: number;
 }) {
   const current = await getCurrentUser();
   if (!current || current.user._id !== input.userId) {
@@ -24,6 +26,7 @@ export async function purchasePlan(input: {
     planId: input.planId,
     coin: input.coin,
     ...(input.fundingSource ? { fundingSource: input.fundingSource } : {}),
+    commitAmountUsd: input.commitAmountUsd,
   });
 
   revalidatePath("/dashboard/mining-packages");
