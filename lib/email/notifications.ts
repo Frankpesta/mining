@@ -31,6 +31,14 @@ function formatCrypto(crypto: string, amount: number): string {
   return `${s} ${crypto}`;
 }
 
+function formatUsd(amount: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 async function sendHtml(opts: {
   to: string;
   subject: string;
@@ -70,6 +78,34 @@ export async function handleEmailDispatch(kind: string, payload: Record<string, 
       const crypto = String(payload.crypto ?? "");
       const userEmail = String(payload.userEmail ?? "");
       const depositId = String(payload.depositId ?? "");
+
+      if (userEmail) {
+        const html = await render(
+          EventNoticeEmail({
+            siteUrl,
+            preview: "We received your deposit request",
+            title: "Deposit request received",
+            intro:
+              "We received your deposit and it is pending review. You will get another email when it is approved or rejected.",
+            rows: [
+              { label: "Amount", value: formatCrypto(crypto, amount) },
+              { label: "Reference", value: depositId },
+              ...(payload.txHash
+                ? [{ label: "TX hash", value: String(payload.txHash) }]
+                : []),
+            ],
+            cta: {
+              href: `${siteUrl.replace(/\/$/, "")}/dashboard`,
+              label: "Open dashboard",
+            },
+          }),
+        );
+        await sendHtml({
+          to: userEmail,
+          subject: `Deposit request received · blockhashpro`,
+          html,
+        });
+      }
 
       for (const adminTo of admins) {
         const html = await render(
@@ -136,6 +172,9 @@ export async function handleEmailDispatch(kind: string, payload: Record<string, 
               { label: "Amount", value: formatCrypto(crypto, amount) },
               { label: "Reference", value: depositId },
               { label: "Status", value: status === "approved" ? "Approved" : "Rejected" },
+              ...(status === "rejected" && adminNote
+                ? [{ label: "Reason", value: adminNote }]
+                : []),
             ],
             cta: {
               href: `${siteUrl.replace(/\/$/, "")}/dashboard`,
@@ -272,7 +311,7 @@ export async function handleEmailDispatch(kind: string, payload: Record<string, 
       const userIntro =
         status === "completed"
           ? templateBody
-          : `Your withdrawal status is now: ${withdrawalStatusLabel(status)}.${adminNote ? ` ${adminNote}` : ""}`;
+          : `Your withdrawal status is now: ${withdrawalStatusLabel(status)}.`;
 
       if (userEmail) {
         const rows: { label: string; value: string }[] = [
@@ -281,8 +320,8 @@ export async function handleEmailDispatch(kind: string, payload: Record<string, 
           { label: "Status", value: withdrawalStatusLabel(status) },
         ];
         if (txHash) rows.push({ label: "Transaction", value: txHash });
-        if (adminNote && status !== "completed") {
-          rows.push({ label: "Note", value: adminNote });
+        if (adminNote) {
+          rows.push({ label: "Note from our team", value: adminNote });
         }
 
         const html = await render(
@@ -330,6 +369,174 @@ export async function handleEmailDispatch(kind: string, payload: Record<string, 
         await sendHtml({
           to: adminTo,
           subject: `[Admin] Withdrawal ${status} · ${formatCrypto(crypto, amount)}`,
+          html,
+        });
+      }
+      break;
+    }
+
+    case "plan_purchased": {
+      const userEmail = String(payload.userEmail ?? "");
+      const planName = String(payload.planName ?? "Plan");
+      const purchaseAmount = Number(payload.purchaseAmount);
+      const coin = String(payload.coin ?? "");
+      const durationDays = Number(payload.durationDays ?? 0);
+      const endTime = Number(payload.endTime ?? 0);
+      const fundingSource = String(payload.fundingSource ?? "platform");
+      const operationId = String(payload.operationId ?? "");
+      const hashRate =
+        payload.hashRate !== undefined ? Number(payload.hashRate) : 0;
+      const hashRateUnit = String(payload.hashRateUnit ?? "");
+
+      const endDate =
+        endTime > 0
+          ? new Date(endTime).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "—";
+
+      if (userEmail) {
+        const html = await render(
+          EventNoticeEmail({
+            siteUrl,
+            preview: `Mining plan started · ${planName}`,
+            title: "Mining plan active",
+            intro: `Your purchase is confirmed. The contract runs until ${endDate}.`,
+            rows: [
+              { label: "Plan", value: planName },
+              { label: "Principal (USD)", value: formatUsd(purchaseAmount) },
+              { label: "Reward asset", value: coin },
+              { label: "Hash rate", value: `${hashRate} ${hashRateUnit}` },
+              { label: "Duration", value: `${durationDays} days` },
+              { label: "Contract ends", value: endDate },
+              {
+                label: "Funded from",
+                value:
+                  fundingSource === "mining"
+                    ? "Mined earnings (reinvest)"
+                    : "Platform wallet",
+              },
+              { label: "Operation ID", value: operationId },
+            ],
+            cta: {
+              href: `${siteUrl.replace(/\/$/, "")}/dashboard/mining`,
+              label: "View mining",
+            },
+          }),
+        );
+        await sendHtml({
+          to: userEmail,
+          subject: `Plan started · ${planName} · blockhashpro`,
+          html,
+        });
+      }
+
+      for (const adminTo of admins) {
+        const html = await render(
+          EventNoticeEmail({
+            siteUrl,
+            variant: "admin",
+            preview: `Plan purchased · ${userEmail}`,
+            title: "User purchased a mining plan",
+            intro: "A user started a new mining operation.",
+            rows: [
+              { label: "User", value: userEmail || "—" },
+              { label: "Plan", value: planName },
+              { label: "Principal (USD)", value: formatUsd(purchaseAmount) },
+              { label: "Coin", value: coin },
+              { label: "Operation ID", value: operationId },
+              {
+                label: "Funded from",
+                value: fundingSource === "mining" ? "Mining" : "Platform",
+              },
+            ],
+            cta: {
+              href: `${siteUrl.replace(/\/$/, "")}/admin/mining-operations`,
+              label: "Mining operations",
+            },
+          }),
+        );
+        await sendHtml({
+          to: adminTo,
+          subject: `[Admin] Plan purchase · ${formatUsd(purchaseAmount)} · ${userEmail || "user"}`,
+          html,
+        });
+      }
+      break;
+    }
+
+    case "mining_operation_completed": {
+      const userEmail = String(payload.userEmail ?? "");
+      const planName = String(payload.planName ?? "Mining plan");
+      const purchaseAmount = Number(payload.purchaseAmount);
+      const coin = String(payload.coin ?? "");
+      const totalMined = Number(payload.totalMined ?? 0);
+      const endTime = Number(payload.endTime ?? 0);
+      const operationId = String(payload.operationId ?? "");
+
+      const endDate =
+        endTime > 0
+          ? new Date(endTime).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "—";
+
+      if (userEmail) {
+        const html = await render(
+          EventNoticeEmail({
+            siteUrl,
+            preview: "Your mining contract has ended",
+            title: "Mining plan completed",
+            intro:
+              "The scheduled duration for this contract has finished. You can start a new plan from Mining packages anytime.",
+            rows: [
+              { label: "Plan", value: planName },
+              { label: "Principal (USD)", value: formatUsd(purchaseAmount) },
+              { label: "Reward asset", value: coin },
+              { label: "Tracked total mined (USD)", value: formatUsd(totalMined) },
+              { label: "Ended", value: endDate },
+              { label: "Operation ID", value: operationId },
+            ],
+            cta: {
+              href: `${siteUrl.replace(/\/$/, "")}/dashboard/mining-packages`,
+              label: "Browse plans",
+            },
+          }),
+        );
+        await sendHtml({
+          to: userEmail,
+          subject: `Mining plan completed · ${planName} · blockhashpro`,
+          html,
+        });
+      }
+
+      for (const adminTo of admins) {
+        const html = await render(
+          EventNoticeEmail({
+            siteUrl,
+            variant: "admin",
+            preview: `Contract completed · ${operationId}`,
+            title: "Mining contract completed",
+            intro: "A mining operation reached its scheduled end date.",
+            rows: [
+              { label: "User", value: userEmail || "—" },
+              { label: "Plan", value: planName },
+              { label: "Principal (USD)", value: formatUsd(purchaseAmount) },
+              { label: "Operation ID", value: operationId },
+            ],
+            cta: {
+              href: `${siteUrl.replace(/\/$/, "")}/admin/mining-operations`,
+              label: "Admin mining",
+            },
+          }),
+        );
+        await sendHtml({
+          to: adminTo,
+          subject: `[Admin] Mining completed · ${planName} · ${userEmail || "user"}`,
           html,
         });
       }

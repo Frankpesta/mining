@@ -59,6 +59,9 @@ export const processMiningOperationsMutation = internalMutation({
               await deductUsdLikeFromPlatformBalance(ctx, user, operation.purchaseAmount);
             } catch {
               await ctx.db.patch(operation._id, { status: "completed" });
+              await ctx.scheduler.runAfter(0, internal.emails.sendMiningOperationCompletedEmail, {
+                operationId: operation._id,
+              });
               completed++;
               processed++;
               continue;
@@ -86,6 +89,9 @@ export const processMiningOperationsMutation = internalMutation({
         }
         await ctx.db.patch(operation._id, {
           status: "completed",
+        });
+        await ctx.scheduler.runAfter(0, internal.emails.sendMiningOperationCompletedEmail, {
+          operationId: operation._id,
         });
         completed++;
         processed++;

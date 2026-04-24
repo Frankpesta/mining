@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 
 import { mutation, query, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { resolveEarningTierForPlan } from "./earningTiers";
 import {
@@ -325,6 +326,11 @@ export const purchasePlan = mutation({
         commitAmountUsd: args.commitAmountUsd,
       },
       createdAt: now,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.emails.sendPlanPurchasedEmail, {
+      operationId,
+      fundingSource,
     });
 
     return operationId;

@@ -1,10 +1,17 @@
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
+
+/** Next.js app URL for /api/emails/dispatch. Set in Convex: EMAIL_DISPATCH_BASE_URL or NEXT_PUBLIC_APP_URL (production site, not localhost). */
+function emailDispatchBaseUrl() {
+  const a = process.env.EMAIL_DISPATCH_BASE_URL?.replace(/\/$/, "");
+  const b = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  return a || b || "https://blockhashpro.xyz";
+}
 
 async function postDispatch(kind: string, payload: Record<string, unknown>) {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const baseUrl = emailDispatchBaseUrl();
   const secret = process.env.EMAIL_DISPATCH_SECRET;
   if (!secret) {
     console.warn(
@@ -211,6 +218,66 @@ export const sendTicketCreatedEmail = internalAction({
       name: ticket.name,
       subject: ticket.subject,
       message: ticket.message,
+      adminRecipients: admins,
+    });
+  },
+});
+
+export const sendPlanPurchasedEmail = internalAction({
+  args: {
+    operationId: v.id("miningOperations"),
+    fundingSource: v.optional(
+      v.union(v.literal("platform"), v.literal("mining")),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const op = await ctx.runQuery(api.miningOperations.getMiningOperationById, {
+      operationId: args.operationId,
+    });
+    if (!op) return;
+    const [plan, user, admins] = await Promise.all([
+      ctx.runQuery(api.plans.getPlanById, { planId: op.planId }),
+      ctx.runQuery(internal.deposits.getUserById, { userId: op.userId }),
+      ctx.runQuery(internal.users.listAdminEmails, {}),
+    ]);
+    if (!plan) return;
+    const funding = args.fundingSource ?? "platform";
+    await postDispatch("plan_purchased", {
+      operationId: args.operationId,
+      userEmail: user?.email ?? "",
+      planName: plan.name,
+      purchaseAmount: op.purchaseAmount,
+      coin: op.coin,
+      durationDays: plan.duration,
+      endTime: op.endTime,
+      hashRate: op.hashRate,
+      hashRateUnit: op.hashRateUnit,
+      fundingSource: funding,
+      adminRecipients: admins,
+    });
+  },
+});
+
+export const sendMiningOperationCompletedEmail = internalAction({
+  args: { operationId: v.id("miningOperations") },
+  handler: async (ctx, args) => {
+    const op = await ctx.runQuery(api.miningOperations.getMiningOperationById, {
+      operationId: args.operationId,
+    });
+    if (!op) return;
+    const [plan, user, admins] = await Promise.all([
+      ctx.runQuery(api.plans.getPlanById, { planId: op.planId }),
+      ctx.runQuery(internal.deposits.getUserById, { userId: op.userId }),
+      ctx.runQuery(internal.users.listAdminEmails, {}),
+    ]);
+    await postDispatch("mining_operation_completed", {
+      operationId: args.operationId,
+      userEmail: user?.email ?? "",
+      planName: plan?.name ?? "Mining plan",
+      purchaseAmount: op.purchaseAmount,
+      coin: op.coin,
+      totalMined: op.totalMined,
+      endTime: op.endTime,
       adminRecipients: admins,
     });
   },
