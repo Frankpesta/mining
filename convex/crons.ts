@@ -1,6 +1,6 @@
 import { internalMutation, internalAction } from "./_generated/server";
 import { cronJobs } from "convex/server";
-import { internal, api } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import { randomDailyUsdForTier, type EarningTier } from "./earningTiers";
 import {
@@ -264,6 +264,21 @@ export const processMiningOperationsMutation = internalMutation({
           await ctx.db.patch(operation._id, {
             totalMined: operation.totalMined + dailyProfitUSD, // Store in USD for tracking
             lastPayoutDate: todayStart,
+          });
+
+          await ctx.db.insert("miningPayouts", {
+            userId: operation.userId,
+            operationId: operation._id,
+            planId: operation.planId,
+            coin: operation.coin,
+            payoutDate: todayStart,
+            purchaseAmount,
+            roiPercent:
+              purchaseAmount > 0 ? (dailyProfitUSD / purchaseAmount) * 100 : 0,
+            profitUSD: dailyProfitUSD,
+            profitCoin: dailyProfitCoin,
+            coinPriceUSD: coinPrice,
+            createdAt: now,
           });
 
           payoutsDistributed++;

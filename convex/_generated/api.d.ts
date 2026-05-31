@@ -31,6 +31,7 @@ import type * as profiles from "../profiles.js";
 import type * as referrals from "../referrals.js";
 import type * as sessions from "../sessions.js";
 import type * as tickets from "../tickets.js";
+import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 import type * as usersAdmin from "../usersAdmin.js";
 import type * as wallet from "../wallet.js";
@@ -74,6 +75,7 @@ declare const fullApi: ApiFromModules<{
   referrals: typeof referrals;
   sessions: typeof sessions;
   tickets: typeof tickets;
+  transactions: typeof transactions;
   users: typeof users;
   usersAdmin: typeof usersAdmin;
   wallet: typeof wallet;

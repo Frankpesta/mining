@@ -13,6 +13,7 @@ const navigation = [
   { href: "/dashboard/purchase-hashpower", label: "Purchase HashPower", icon: "wallet" },
   { href: "/dashboard/mining-packages", label: "Mining Packages", icon: "layers" },
   { href: "/dashboard/mining", label: "Mining Ops", icon: "gauge" },
+  { href: "/dashboard/transactions", label: "Transactions", icon: "wallet-minimal" },
   { href: "/dashboard/activity", label: "Activity", icon: "chart-line" },
   { href: "/dashboard/wallet", label: "Wallet", icon: "coins" },
   { href: "/dashboard/withdraw", label: "Withdraw", icon: "waypoints" },

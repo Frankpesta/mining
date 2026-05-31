@@ -192,6 +192,23 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_status", ["status"]),
 
+  miningPayouts: defineTable({
+    userId: v.id("users"),
+    operationId: v.id("miningOperations"),
+    planId: v.id("plans"),
+    coin: v.string(),
+    payoutDate: v.number(), // UTC start-of-day timestamp for the ROI day
+    purchaseAmount: v.number(),
+    roiPercent: v.number(),
+    profitUSD: v.number(),
+    profitCoin: v.number(),
+    coinPriceUSD: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_operation", ["operationId"])
+    .index("by_user_payout_date", ["userId", "payoutDate"]),
+
   auditLogs: defineTable({
     actorId: v.optional(v.id("users")),
     action: v.string(),

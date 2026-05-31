@@ -132,6 +132,25 @@ export const updatePlan = mutation({
     }
 
     await ctx.db.patch(planId, patch as Partial<typeof plan>);
+
+    if (args.dailyRoiPercent !== undefined && args.dailyRoiPercent > 0) {
+      const activeOperations = await ctx.db
+        .query("miningOperations")
+        .withIndex("by_status", (q) => q.eq("status", "active"))
+        .collect();
+
+      await Promise.all(
+        activeOperations
+          .filter((operation) => operation.planId === planId)
+          .map((operation) =>
+            ctx.db.patch(operation._id, {
+              currentRate: args.dailyRoiPercent,
+              dailyReturnUSD: undefined,
+              dailyEarningTier: undefined,
+            }),
+          ),
+      );
+    }
   },
 });
 
