@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useAccount, useConnect, useDisconnect, useWriteContract, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
+import { useAccount, useConnect, useDisconnect, useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Wallet, Loader2, CheckCircle2 } from "lucide-react";
-import { parseUnits } from "viem";
 
 import { submitDepositRequest } from "@/app/(dashboard)/dashboard/purchase-hashpower/actions";
 import {
@@ -25,7 +24,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
-import { prepareDepositTransaction, type SupportedCrypto } from "@/lib/wallet/deposit";
+import { getCryptoPrices, type CryptoPrices } from "@/lib/crypto-prices";
+import { STATIC_USD_PER_CRYPTO } from "@/lib/crypto-static-usd";
+import { prepareDepositTransaction } from "@/lib/wallet/deposit";
 
 type Crypto = "ETH" | "BTC" | "USDT";
 
@@ -50,14 +51,18 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
   const { address, isConnected } = useAccount();
   const { connect, connectors, isPending: isConnecting } = useConnect();
   const { disconnect } = useDisconnect();
-  const { writeContract, data: contractHash, isPending: isSendingContract } = useWriteContract();
   const { sendTransaction, data: sendHash, isPending: isSendingTransaction } = useSendTransaction();
-  const transactionHash = contractHash || sendHash;
+  const transactionHash = sendHash;
   const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
     hash: transactionHash,
   });
   const [isSubmitting, startSubmit] = useTransition();
   const [submittedTxHash, setSubmittedTxHash] = useState<string>("");
+  const [prices, setPrices] = useState<CryptoPrices>({});
+  const [pendingWalletDeposit, setPendingWalletDeposit] = useState<{
+    crypto: Crypto;
+    amount: number;
+  } | null>(null);
 
   const walletMap = wallets.reduce<Record<Crypto, WalletOption>>((accumulator, wallet) => {
     accumulator[wallet.crypto] = wallet;
@@ -77,23 +82,53 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
   });
 
   const selectedCrypto = form.watch("crypto") as Crypto;
+  const usdAmountValue = form.watch("amount");
   const selectedWallet = selectedCrypto ? walletMap[selectedCrypto] : undefined;
-  const minAmount = minimums?.[selectedCrypto] ?? DEFAULT_MINIMUMS[selectedCrypto] ?? 0;
+  const cryptoMinAmount = minimums?.[selectedCrypto] ?? DEFAULT_MINIMUMS[selectedCrypto] ?? 0;
+  const selectedPrice = prices[selectedCrypto] ?? STATIC_USD_PER_CRYPTO[selectedCrypto] ?? 0;
+  const usdAmount =
+    typeof usdAmountValue === "string"
+      ? parseFloat(usdAmountValue || "0")
+      : typeof usdAmountValue === "number"
+        ? usdAmountValue
+        : 0;
+  const cryptoEquivalent = selectedPrice > 0 && usdAmount > 0 ? usdAmount / selectedPrice : 0;
+  const minUsdAmount = cryptoMinAmount * selectedPrice;
+
+  useEffect(() => {
+    const coins = Array.from(new Set(wallets.map((wallet) => wallet.crypto)));
+    if (coins.length === 0) return;
+
+    let isMounted = true;
+    getCryptoPrices(coins).then((latestPrices) => {
+      if (isMounted) {
+        setPrices(latestPrices);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [wallets]);
 
   // Auto-submit deposit request when transaction is confirmed
   useEffect(() => {
     if (isConfirmed && transactionHash && submittedTxHash !== transactionHash) {
       const amountValue = form.getValues("amount");
-      const amount: number = typeof amountValue === "string" 
+      const amountUsd: number = typeof amountValue === "string" 
         ? parseFloat(amountValue || "0") 
         : (typeof amountValue === "number" ? amountValue : 0);
+      const crypto = pendingWalletDeposit?.crypto ?? selectedCrypto;
+      const price = prices[crypto] ?? STATIC_USD_PER_CRYPTO[crypto] ?? 0;
+      const amount = pendingWalletDeposit?.amount ?? (price > 0 ? amountUsd / price : 0);
+
       if (amount > 0 && transactionHash) {
         const txHash = transactionHash; // Capture for type safety in async callback
         setSubmittedTxHash(txHash);
         
         startSubmit(async () => {
           const response = await submitDepositRequest({
-            crypto: selectedCrypto,
+            crypto,
             amount,
             txHash,
           });
@@ -101,17 +136,18 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
           if (response.success) {
             toast.success("Deposit request submitted automatically! Awaiting admin approval.");
             form.reset({
-              crypto: selectedCrypto,
+              crypto,
               amount: "",
               txHash: "",
             });
+            setPendingWalletDeposit(null);
           } else {
             toast.error(response.error ?? "Failed to submit deposit request.");
           }
         });
       }
     }
-  }, [isConfirmed, transactionHash, submittedTxHash, selectedCrypto, form, startSubmit]);
+  }, [isConfirmed, transactionHash, submittedTxHash, selectedCrypto, form, startSubmit, prices, pendingWalletDeposit]);
 
   const handleConnectWallet = (connectorId: string) => {
     const connector = connectors.find((c) => c.id === connectorId);
@@ -120,7 +156,7 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
     }
   };
 
-  const handleSendTransaction = async (values: DepositRequestValues) => {
+  const handleSendTransaction = async (values: DepositRequestValues, cryptoAmount: number) => {
     if (!isConnected || !address) {
       toast.error("Please connect your wallet first");
       return;
@@ -133,8 +169,9 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
 
     try {
       if (values.crypto === "ETH") {
-        const tx = prepareDepositTransaction(selectedWallet.address, values.amount, values.crypto);
+        const tx = prepareDepositTransaction(selectedWallet.address, cryptoAmount, values.crypto);
         if ("value" in tx) {
+          setPendingWalletDeposit({ crypto: values.crypto, amount: cryptoAmount });
           sendTransaction({
             to: tx.to,
             value: tx.value,
@@ -149,9 +186,10 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
         return;
       } else if (values.crypto === "USDT") {
         // USDT is an ERC20 token, can be sent via contract
-        const tx = prepareDepositTransaction(selectedWallet.address, values.amount, values.crypto);
+        const tx = prepareDepositTransaction(selectedWallet.address, cryptoAmount, values.crypto);
         if ("to" in tx && "data" in tx) {
           // For ERC20 tokens, we need to send a transaction to the token contract
+          setPendingWalletDeposit({ crypto: values.crypto, amount: cryptoAmount });
           sendTransaction({
             to: tx.to as `0x${string}`,
             data: tx.data,
@@ -178,21 +216,32 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
     }
 
     const values: DepositRequestValues = parsed.data;
+    const price = prices[values.crypto] ?? STATIC_USD_PER_CRYPTO[values.crypto] ?? 0;
+    const cryptoAmount = price > 0 ? values.amount / price : 0;
 
-    if (minAmount && values.amount < minAmount) {
-      toast.error(`Minimum deposit for ${values.crypto} is ${minAmount}.`);
+    if (price <= 0 || cryptoAmount <= 0) {
+      toast.error(`Unable to calculate the ${values.crypto} equivalent. Try again shortly.`);
+      return;
+    }
+
+    const minUsd = (minimums?.[values.crypto] ?? DEFAULT_MINIMUMS[values.crypto] ?? 0) * price;
+    if (minUsd && values.amount < minUsd) {
+      toast.error(`Minimum deposit for ${values.crypto} is $${formatUsd(minUsd)}.`);
       return;
     }
 
     // If wallet is connected, send transaction automatically
     if (isConnected && address) {
-      await handleSendTransaction(values);
+      await handleSendTransaction(values, cryptoAmount);
       return;
     }
 
     // Otherwise, submit manual deposit request
     startSubmit(async () => {
-      const response = await submitDepositRequest(values);
+      const response = await submitDepositRequest({
+        ...values,
+        amount: cryptoAmount,
+      });
       if (response.success) {
         toast.success("Deposit request submitted. We'll notify you once it's approved.");
         form.reset({
@@ -206,7 +255,7 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
     });
   }
 
-  const isLoading = isConnecting || isSendingContract || isSendingTransaction || isConfirming || isSubmitting;
+  const isLoading = isConnecting || isSendingTransaction || isConfirming || isSubmitting;
   const showTransactionStatus = transactionHash && (isConfirming || isConfirmed);
 
   return (
@@ -315,7 +364,7 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
                   </select>
                 </FormControl>
                 <FormDescription>
-                  Minimum deposit: {minAmount} {selectedCrypto}
+                  Minimum deposit: ${formatUsd(minUsdAmount)} ({formatCryptoAmount(cryptoMinAmount, selectedCrypto)})
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -329,14 +378,14 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
               const stringValue: string = typeof field.value === "string" ? field.value : (field.value?.toString() ?? "");
               return (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>Amount (USD)</FormLabel>
                   <FormControl>
                     <Input
                       {...({
                         type: "number",
                         step: "any",
-                        min: minAmount ?? 0,
-                        placeholder: `Enter amount in ${selectedCrypto}`,
+                        min: minUsdAmount || 0,
+                        placeholder: "Enter amount in USD",
                         disabled: isDisabled || isLoading,
                         value: stringValue,
                         onChange: (e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.value),
@@ -347,9 +396,9 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
                     />
                   </FormControl>
                   <FormDescription>
-                    {isConnected
-                      ? "Click deposit to send transaction directly from your wallet"
-                      : "Funds must be sent from an address you control. Deposits are credited after admin review."}
+                    {cryptoEquivalent > 0
+                      ? `Equivalent to ${formatCryptoAmount(cryptoEquivalent, selectedCrypto)} at $${formatUsd(selectedPrice)} per ${selectedCrypto}.`
+                      : "Enter a USD amount to see the crypto amount to send."}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -389,6 +438,11 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
                 Deposit address ({selectedWallet.crypto})
               </p>
               <p className="mt-1 font-mono text-sm break-all">{selectedWallet.address}</p>
+              {cryptoEquivalent > 0 ? (
+                <p className="mt-2 font-semibold text-foreground">
+                  Send {formatCryptoAmount(cryptoEquivalent, selectedWallet.crypto)} for ${formatUsd(usdAmount)}
+                </p>
+              ) : null}
               {!isConnected && (
                 <button
                   type="button"
@@ -416,7 +470,7 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {isConnecting
                   ? "Connecting..."
-                  : isSendingContract || isSendingTransaction
+                  : isSendingTransaction
                     ? "Sending transaction..."
                     : isConfirming
                       ? "Confirming..."
@@ -434,3 +488,18 @@ export function DepositFormWallet({ wallets, minimums }: DepositFormWalletProps)
   );
 }
 
+function formatUsd(value: number) {
+  if (!Number.isFinite(value)) return "0.00";
+  return value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function formatCryptoAmount(value: number, crypto: Crypto) {
+  if (!Number.isFinite(value)) return `0 ${crypto}`;
+  return `${value.toLocaleString(undefined, {
+    minimumFractionDigits: crypto === "USDT" ? 2 : 0,
+    maximumFractionDigits: crypto === "USDT" ? 2 : 8,
+  })} ${crypto}`;
+}

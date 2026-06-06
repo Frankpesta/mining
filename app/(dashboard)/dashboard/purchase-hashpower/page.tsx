@@ -48,8 +48,8 @@ export default async function PurchaseHashPowerPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Purchase HashPower</h1>
         <p className="text-sm text-muted-foreground">
-          Choose a supported crypto asset and follow the instructions to add funds to your platform
-          balance.
+          Choose a supported crypto asset, enter the USD value, and send the displayed crypto
+          equivalent to add funds to your platform balance.
         </p>
       </div>
 
@@ -58,7 +58,8 @@ export default async function PurchaseHashPowerPage() {
           <CardHeader>
             <CardTitle>Send your deposit</CardTitle>
             <CardDescription>
-              Transfer funds to one of the addresses below, then submit the request for review.
+              Transfer the calculated crypto amount to one of the addresses below, then submit the
+              request for review.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 text-sm">
@@ -96,7 +97,7 @@ export default async function PurchaseHashPowerPage() {
           <CardHeader>
             <CardTitle>Submit deposit request</CardTitle>
             <CardDescription>
-              Provide the amount and optional transaction hash so we can reconcile your transfer.
+              Enter the USD amount and optional transaction hash so we can reconcile your transfer.
             </CardDescription>
           </CardHeader>
           <CardContent>
