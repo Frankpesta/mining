@@ -8,6 +8,28 @@ import type { api } from "./_generated/api";
 const sumPlatformBalance = (balance: { ETH: number; USDT: number; USDC: number }) =>
   (balance.ETH ?? 0) + (balance.USDT ?? 0) + (balance.USDC ?? 0);
 
+const aggregatePlatformBalanceByCoin = (
+  users: Array<{ platformBalance: { others?: Record<string, number> } & Record<string, unknown> }>,
+) => {
+  const totals: Record<string, number> = {};
+  for (const user of users) {
+    for (const [key, value] of Object.entries(user.platformBalance)) {
+      if (key === "others") {
+        if (value && typeof value === "object") {
+          for (const [coin, amount] of Object.entries(value as Record<string, number>)) {
+            totals[coin] = (totals[coin] ?? 0) + amount;
+          }
+        }
+        continue;
+      }
+      if (typeof value === "number") {
+        totals[key] = (totals[key] ?? 0) + value;
+      }
+    }
+  }
+  return totals;
+};
+
 const sumMiningBalance = (miningBalance: {
   BTC: number;
   ETH: number;
@@ -139,6 +161,7 @@ export const getAdminDashboardSummary = query({
       (accumulator, user) => accumulator + sumPlatformBalance(user.platformBalance),
       0,
     );
+    const platformBalanceByCoin = aggregatePlatformBalanceByCoin(users);
 
     const totalMiningBalance = users.reduce(
       (accumulator, user) => accumulator + sumMiningBalance(user.miningBalance),
@@ -226,6 +249,7 @@ export const getAdminDashboardSummary = query({
         awardedReferrals,
         totalReferralBonus,
       },
+      platformBalanceByCoin,
       recentDeposits,
       recentWithdrawals,
       charts: {

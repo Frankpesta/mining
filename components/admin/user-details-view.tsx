@@ -19,6 +19,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { AdminUserBalanceAdjust } from "@/components/admin/admin-user-balance-adjust";
+import { calculateBalanceUSD, type CryptoPrices } from "@/lib/crypto-prices";
 
 type UserDetails = {
   user: Doc<"users">;
@@ -34,21 +35,17 @@ type UserDetailsViewProps = {
   userDetails: UserDetails;
   /** When true, shows credit/debit controls (admin user detail page). */
   showBalanceControls?: boolean;
+  /** Live coin -> USD prices, used to value non-stablecoin balances correctly. */
+  prices?: CryptoPrices;
 };
 
-export function UserDetailsView({ userDetails, showBalanceControls }: UserDetailsViewProps) {
+export function UserDetailsView({ userDetails, showBalanceControls, prices = {} }: UserDetailsViewProps) {
   const { user, stats } = userDetails;
 
-  const totalPlatformBalance =
-    (user.platformBalance.ETH ?? 0) +
-    (user.platformBalance.USDT ?? 0) +
-    (user.platformBalance.USDC ?? 0) +
-    (user.platformBalance.BTC ?? 0);
-
-  const totalMiningBalance =
-    (user.miningBalance.BTC ?? 0) +
-    (user.miningBalance.ETH ?? 0) +
-    (user.miningBalance.LTC ?? 0);
+  // platformBalance/miningBalance store raw coin quantities (e.g. BTC/ETH amounts),
+  // not USD, so they must be converted with live prices before summing.
+  const totalPlatformBalance = calculateBalanceUSD(user.platformBalance, prices);
+  const totalMiningBalance = calculateBalanceUSD(user.miningBalance, prices);
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -195,13 +192,8 @@ export function UserDetailsView({ userDetails, showBalanceControls }: UserDetail
                 </div>
               )}
               <div className="flex justify-between border-t pt-2 font-semibold">
-                <span>Total</span>
-                <span>
-                  {totalMiningBalance.toLocaleString(undefined, {
-                    minimumFractionDigits: 8,
-                    maximumFractionDigits: 8,
-                  })}
-                </span>
+                <span>Total (USD est.)</span>
+                <span>{formatCurrency(totalMiningBalance)}</span>
               </div>
             </div>
           </div>

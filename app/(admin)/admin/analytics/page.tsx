@@ -8,11 +8,18 @@ import {
 } from "@/components/ui/card";
 import { getConvexClient } from "@/lib/convex/client";
 import { formatCurrency } from "@/lib/utils";
+import { getCryptoPrices, calculateBalanceUSD } from "@/lib/crypto-prices";
 import { AnalyticsCharts } from "@/components/admin/analytics-charts";
 
 export default async function AdminAnalyticsPage() {
   const convex = getConvexClient();
   const summary = await convex.query(api.dashboard.getAdminDashboardSummary, {});
+
+  // platformBalanceByCoin holds raw per-coin quantities (e.g. BTC/ETH amounts),
+  // not USD, so it must be converted with live prices before summing.
+  const platformCoins = Object.keys(summary.platformBalanceByCoin);
+  const prices = platformCoins.length > 0 ? await getCryptoPrices(platformCoins) : {};
+  const totalPlatformBalanceUSD = calculateBalanceUSD(summary.platformBalanceByCoin, prices);
 
   return (
     <div className="space-y-6">
@@ -41,7 +48,7 @@ export default async function AdminAnalyticsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold">{formatCurrency(summary.metrics.totalPlatformBalance)}</p>
+            <p className="text-2xl font-semibold">{formatCurrency(totalPlatformBalanceUSD)}</p>
           </CardContent>
         </Card>
 

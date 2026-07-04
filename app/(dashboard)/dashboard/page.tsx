@@ -15,10 +15,11 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { ReferralCard } from "@/components/dashboard/referral-card";
 import { getCryptoPrices, calculateBalanceUSD } from "@/lib/crypto-prices";
 
-const currencyLabels: Record<"ETH" | "USDT" | "USDC", string> = {
+const currencyLabels: Record<"ETH" | "USDT" | "USDC" | "BTC", string> = {
   ETH: "Ethereum",
   USDT: "Tether",
   USDC: "USD Coin",
+  BTC: "Bitcoin",
 };
 
 export default async function DashboardOverviewPage() {
@@ -34,28 +35,34 @@ export default async function DashboardOverviewPage() {
     userId: user._id,
   });
 
-  // Calculate mining balance USD value for proper display
-  const miningCoins: string[] = [];
-  if (summary.balances.mining) {
-    for (const [key, value] of Object.entries(summary.balances.mining)) {
+  // Calculate mining + platform balance USD values for proper display
+  // (platformBalance/miningBalance store raw coin quantities, e.g. BTC/ETH amounts,
+  // not USD face value, so they must be converted with live prices before summing)
+  const balanceCoins: string[] = [];
+  for (const balance of [summary.balances.mining, summary.balances.platform]) {
+    if (!balance) continue;
+    for (const [key, value] of Object.entries(balance)) {
       if (key !== "others" && typeof value === "number" && value > 0) {
-        miningCoins.push(key);
+        balanceCoins.push(key);
       }
       if (key === "others" && value && typeof value === "object") {
-        miningCoins.push(...Object.keys(value));
+        balanceCoins.push(...Object.keys(value));
       }
     }
   }
-  const prices = miningCoins.length > 0 ? await getCryptoPrices([...new Set(miningCoins)]) : {};
+  const prices = balanceCoins.length > 0 ? await getCryptoPrices([...new Set(balanceCoins)]) : {};
   const miningBalanceUSD = summary.balances.mining
     ? calculateBalanceUSD(summary.balances.mining, prices)
+    : 0;
+  const platformBalanceUSD = summary.balances.platform
+    ? calculateBalanceUSD(summary.balances.platform, prices)
     : 0;
 
   const statCards = [
     {
       label: "Platform balance",
-      value: formatCurrency(summary.metrics.platformBalance),
-      hint: "Spendable funds across ETH/USDT/USDC",
+      value: formatCurrency(platformBalanceUSD),
+      hint: "Spendable funds across ETH/USDT/USDC/BTC",
     },
     {
       label: "Mining earnings",
@@ -113,21 +120,26 @@ export default async function DashboardOverviewPage() {
             <CardDescription>Spendable balance for purchases and withdrawals.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {(Object.entries(summary.balances.platform) as Array<["ETH" | "USDT" | "USDC", number]>)
-              .filter(([, value]) => typeof value === "number")
+            {(Object.entries(summary.balances.platform) as Array<["ETH" | "USDT" | "USDC" | "BTC", number]>)
+              .filter(([, value]) => typeof value === "number" && value > 0)
               .map(([currency, value]) => (
                 <div key={currency} className="flex items-center justify-between">
                   <div>
                     <p className="font-semibold uppercase tracking-wide">{currency}</p>
                     <p className="text-xs text-muted-foreground">{currencyLabels[currency]}</p>
                   </div>
-                  <span className="font-medium tabular-nums">{value.toLocaleString()}</span>
+                  <span className="font-medium tabular-nums">
+                    {value.toLocaleString(undefined, {
+                      minimumFractionDigits: currency === "BTC" ? 8 : 2,
+                      maximumFractionDigits: currency === "BTC" ? 8 : 2,
+                    })}
+                  </span>
                 </div>
               ))}
             <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs uppercase tracking-wide text-muted-foreground">
               <span>Total (USD est.)</span>
               <span className="text-sm font-semibold">
-                {formatCurrency(summary.metrics.platformBalance)}
+                {formatCurrency(platformBalanceUSD)}
               </span>
             </div>
           </CardContent>

@@ -16,11 +16,17 @@ export default async function AdminOverviewPage() {
   const convex = getConvexClient();
   const summary = await convex.query(api.dashboard.getAdminDashboardSummary, {});
 
+  // platformBalanceByCoin holds raw per-coin quantities (e.g. BTC/ETH amounts),
+  // not USD, so it must be converted with live prices before summing.
+  const platformCoins = Object.keys(summary.platformBalanceByCoin);
+  const prices = platformCoins.length > 0 ? await getCryptoPrices(platformCoins) : {};
+  const totalPlatformBalanceUSD = calculateBalanceUSD(summary.platformBalanceByCoin, prices);
+
   // Calculate total mining balance USD value properly
   // Note: totalMiningBalance from summary is a raw sum of coins, not USD
   // We'll show it as "Total coins" or fetch prices for accurate USD
   // For now, we'll note that this is an approximation
-  const miningEarningsDisplay = summary.metrics.totalMiningBalance > 0 
+  const miningEarningsDisplay = summary.metrics.totalMiningBalance > 0
     ? `~${summary.metrics.totalMiningBalance.toLocaleString()} coins`
     : "$0.00";
 
@@ -47,8 +53,8 @@ export default async function AdminOverviewPage() {
     },
     {
       label: "Platform balance (USD est.)",
-      value: formatCurrency(summary.metrics.totalPlatformBalance),
-      hint: "Aggregate across ETH/USDT/USDC",
+      value: formatCurrency(totalPlatformBalanceUSD),
+      hint: "Aggregate across ETH/USDT/USDC/BTC",
     },
     {
       label: "Mining earnings",
