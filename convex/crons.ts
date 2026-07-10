@@ -315,58 +315,161 @@ const FALLBACK_PRICES: Record<string, number> = {
 };
 
 /**
- * Fetch prices with retry logic and exponential backoff
+ * Fetch with a hard timeout so a single attempt can never hang indefinitely.
+ * This is what was causing the cron to blow past its time budget and fall
+ * back to manual prices - CoinGecko's free tier can hang or get rate-limited
+ * for many seconds with no response at all.
  */
-async function fetchPricesWithRetry(maxRetries = 3): Promise<Record<string, number>> {
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 5000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+/**
+ * Binance symbols for the coins this cron needs prices for.
+ * Binance's public ticker endpoint requires no API key, has very high
+ * rate limits (1200 request-weight/minute), and responds in well under
+ * a second - unlike CoinGecko's free tier, which is the source of the
+ * timeouts that were forcing this cron to use fallback prices.
+ */
+const BINANCE_SYMBOL_MAP: Record<string, string> = {
+  BTC: "BTCUSDT",
+  ETH: "ETHUSDT",
+};
+
+/**
+ * Primary price source: Binance
+ */
+async function fetchPricesFromBinance(): Promise<Record<string, number>> {
+  const symbols = Object.values(BINANCE_SYMBOL_MAP);
+  const symbolsParam = encodeURIComponent(JSON.stringify(symbols));
+  const response = await fetchWithTimeout(
+    `https://api.binance.com/api/v3/ticker/price?symbols=${symbolsParam}`,
+    { headers: { Accept: "application/json" } }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Binance API returned ${response.status}`);
+  }
+
+  const data = (await response.json()) as Array<{ symbol: string; price: string }>;
+  const symbolToCoin = Object.fromEntries(
+    Object.entries(BINANCE_SYMBOL_MAP).map(([coin, symbol]) => [symbol, coin])
+  );
+
   const prices: Record<string, number> = {};
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      // Fetch both BTC and ETH in a single request to reduce API calls
-      const response = await fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd",
-        {
-          headers: {
-            Accept: "application/json",
-            "User-Agent": "MiningPlatform/1.0",
-          },
-        }
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.bitcoin?.usd) {
-          prices["BTC"] = data.bitcoin.usd;
-        }
-        if (data.ethereum?.usd) {
-          prices["ETH"] = data.ethereum.usd;
-        }
-        
-        if (prices["BTC"] && prices["ETH"]) {
-          console.log(`[processMiningOperations] Fetched prices: BTC=$${prices["BTC"]}, ETH=$${prices["ETH"]}`);
-          return prices;
-        }
-      } else if (response.status === 429) {
-        // Rate limited - wait longer before retry
-        const waitTime = Math.pow(2, attempt) * 2000; // 4s, 8s, 16s
-        console.warn(`[processMiningOperations] Rate limited (429), waiting ${waitTime}ms before retry ${attempt}/${maxRetries}`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-        continue;
-      } else {
-        console.warn(`[processMiningOperations] API returned ${response.status}, attempt ${attempt}/${maxRetries}`);
-      }
-    } catch (error) {
-      console.warn(`[processMiningOperations] Fetch error on attempt ${attempt}/${maxRetries}:`, error);
-    }
-    
-    // Wait before retry with exponential backoff
-    if (attempt < maxRetries) {
-      const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
+  for (const entry of data) {
+    const coin = symbolToCoin[entry.symbol];
+    const price = parseFloat(entry.price);
+    if (coin && Number.isFinite(price) && price > 0) {
+      prices[coin] = price;
     }
   }
-  
   return prices;
+}
+
+/**
+ * Secondary price source: Coinbase. Used if Binance is unreachable (e.g.
+ * blocked from the cloud region the cron runs in) - an independent
+ * exchange guards against any single provider being geo/network-blocked.
+ */
+async function fetchPricesFromCoinbase(): Promise<Record<string, number>> {
+  const response = await fetchWithTimeout(
+    "https://api.coinbase.com/v2/exchange-rates?currency=USD",
+    { headers: { Accept: "application/json" } }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Coinbase API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const rates = data?.data?.rates ?? {};
+  const prices: Record<string, number> = {};
+  for (const [coin, ticker] of [["BTC", "BTC"], ["ETH", "ETH"]] as const) {
+    const rate = parseFloat(rates[ticker]);
+    if (Number.isFinite(rate) && rate > 0) {
+      prices[coin] = 1 / rate;
+    }
+  }
+  return prices;
+}
+
+/**
+ * Tertiary price source: CoinGecko, only used if Binance and Coinbase both fail.
+ */
+async function fetchPricesFromCoinGecko(): Promise<Record<string, number>> {
+  const response = await fetchWithTimeout(
+    "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd",
+    {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "MiningPlatform/1.0",
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`CoinGecko API returned ${response.status}`);
+  }
+
+  const data = await response.json();
+  const prices: Record<string, number> = {};
+  if (data.bitcoin?.usd) prices["BTC"] = data.bitcoin.usd;
+  if (data.ethereum?.usd) prices["ETH"] = data.ethereum.usd;
+  return prices;
+}
+
+/**
+ * Fetch BTC/ETH prices, trying Binance first (fast, generous rate limits),
+ * then Coinbase, then CoinGecko, before giving up and letting the caller
+ * fall back to hardcoded prices. Each attempt is capped at 5s so the whole
+ * function can never hang for more than ~15s total.
+ */
+async function fetchPricesWithRetry(): Promise<Record<string, number>> {
+  try {
+    const prices = await fetchPricesFromBinance();
+    if (prices["BTC"] && prices["ETH"]) {
+      console.log(`[processMiningOperations] Fetched prices from Binance: BTC=$${prices["BTC"]}, ETH=$${prices["ETH"]}`);
+      return prices;
+    }
+    console.warn(`[processMiningOperations] Binance returned incomplete prices, falling back to Coinbase`);
+  } catch (error) {
+    console.warn(`[processMiningOperations] Binance fetch failed, falling back to Coinbase:`, error);
+  }
+
+  try {
+    const prices = await fetchPricesFromCoinbase();
+    if (prices["BTC"] && prices["ETH"]) {
+      console.log(`[processMiningOperations] Fetched prices from Coinbase: BTC=$${prices["BTC"]}, ETH=$${prices["ETH"]}`);
+      return prices;
+    }
+    console.warn(`[processMiningOperations] Coinbase returned incomplete prices, falling back to CoinGecko`);
+  } catch (error) {
+    console.warn(`[processMiningOperations] Coinbase fetch failed, falling back to CoinGecko:`, error);
+  }
+
+  try {
+    const prices = await fetchPricesFromCoinGecko();
+    if (prices["BTC"] && prices["ETH"]) {
+      console.log(`[processMiningOperations] Fetched prices from CoinGecko: BTC=$${prices["BTC"]}, ETH=$${prices["ETH"]}`);
+    } else {
+      console.warn(`[processMiningOperations] CoinGecko returned incomplete prices`);
+    }
+    return prices;
+  } catch (error) {
+    console.warn(`[processMiningOperations] CoinGecko fetch failed:`, error);
+    return {};
+  }
 }
 
 /**
@@ -380,7 +483,7 @@ const processMiningOperationsActionImpl = internalAction({
     console.log(`[processMiningOperations] Starting daily mining operations processing...`);
     
     // Fetch prices with retry logic
-    let prices = await fetchPricesWithRetry(3);
+    let prices = await fetchPricesWithRetry();
     
     // If we couldn't fetch prices, use fallback prices
     // This ensures payouts continue even if the API is down
