@@ -25,11 +25,15 @@ const typeLabels: Record<TransactionEntry["type"], string> = {
   withdrawal: "Withdrawal",
   payout: "Mining ROI",
   purchase: "Plan Purchase",
+  renewal: "Plan Renewal",
   referral: "Referral Bonus",
 };
 
 function formatAmount(entry: TransactionEntry) {
-  const sign = entry.type === "withdrawal" || entry.type === "purchase" ? "-" : "+";
+  const sign =
+    entry.type === "withdrawal" || entry.type === "purchase" || entry.type === "renewal"
+      ? "-"
+      : "+";
   return `${sign}${entry.amount.toLocaleString("en-US", {
     maximumFractionDigits: entry.crypto === "BTC" ? 8 : 6,
     minimumFractionDigits: 0,
@@ -62,8 +66,8 @@ export default async function TransactionsPage() {
       <div>
         <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">Transactions</h1>
         <p className="text-sm text-muted-foreground">
-          Every deposit, withdrawal, plan purchase, mining ROI payout, and referral bonus on your
-          account in one ledger.
+          Every deposit, withdrawal, plan purchase, auto-renewal, mining ROI payout, and referral
+          bonus on your account in one ledger.
         </p>
       </div>
 

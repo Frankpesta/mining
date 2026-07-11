@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
-import { formatDate } from "@/lib/utils";
+import { formatCurrency, formatDate } from "@/lib/utils";
 
 function formatHashrate(hashRate: number, unit: string) {
   return `${hashRate.toLocaleString()} ${unit}`;
@@ -128,8 +128,8 @@ export default async function MiningPage() {
                         <TableRow key={op._id}>
                           <TableCell className="font-medium">{op.coin}</TableCell>
                           <TableCell>{formatHashrate(op.hashRate, op.hashRateUnit)}</TableCell>
-                          <TableCell>{op.totalMined.toFixed(6)}</TableCell>
-                          <TableCell>${op.currentRate.toFixed(2)}/day</TableCell>
+                          <TableCell>{formatCurrency(op.totalMined)}</TableCell>
+                          <TableCell>{op.currentRate.toFixed(2)}%/day</TableCell>
                           <TableCell>
                             <div className="space-y-1">
                               <div className="flex justify-between text-xs">
@@ -204,11 +204,11 @@ export default async function MiningPage() {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Total Mined</span>
-                          <span className="font-medium">{op.totalMined.toFixed(6)}</span>
+                          <span className="font-medium">{formatCurrency(op.totalMined)}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-muted-foreground">Daily Rate</span>
-                          <span className="font-medium">${op.currentRate.toFixed(2)}/day</span>
+                          <span className="font-medium">{op.currentRate.toFixed(2)}%/day</span>
                         </div>
                         <div className="space-y-1 pt-2">
                           <div className="flex justify-between text-xs">

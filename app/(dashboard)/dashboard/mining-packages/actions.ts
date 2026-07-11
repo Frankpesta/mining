@@ -21,7 +21,7 @@ export async function purchasePlan(input: {
   }
 
   const convex = getConvexClient();
-  await convex.mutation(api.plans.purchasePlan, {
+  await convex.action(api.plans.purchasePlan, {
     userId: input.userId,
     planId: input.planId,
     coin: input.coin,

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/use-toast";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { totalUsdLikePlatformBalance } from "@/lib/crypto-static-usd";
 import { toggleUserSuspension, updateUserRole } from "@/app/(admin)/admin/users/actions";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -33,6 +34,7 @@ type User = {
     ETH: number;
     USDT: number;
     USDC: number;
+    BTC?: number;
   };
   createdAt: number;
 };
@@ -109,8 +111,7 @@ export function UserManagementTable({ initialUsers }: UserManagementTableProps) 
             </TableHeader>
             <TableBody>
               {filteredUsers.map((user) => {
-                const totalBalance =
-                  user.platformBalance.ETH + user.platformBalance.USDT + user.platformBalance.USDC;
+                const totalBalance = totalUsdLikePlatformBalance(user.platformBalance);
                 return (
                   <TableRow key={user._id}>
                     <TableCell className="font-medium">{user.email}</TableCell>

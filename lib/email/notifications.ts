@@ -467,6 +467,86 @@ export async function handleEmailDispatch(kind: string, payload: Record<string, 
       break;
     }
 
+    case "mining_operation_renewed": {
+      const userEmail = String(payload.userEmail ?? "");
+      const planName = String(payload.planName ?? "Plan");
+      const purchaseAmount = Number(payload.purchaseAmount);
+      const coin = String(payload.coin ?? "");
+      const durationDays = Number(payload.durationDays ?? 0);
+      const endTime = Number(payload.endTime ?? 0);
+      const operationId = String(payload.operationId ?? "");
+      const hashRate =
+        payload.hashRate !== undefined ? Number(payload.hashRate) : 0;
+      const hashRateUnit = String(payload.hashRateUnit ?? "");
+
+      const endDate =
+        endTime > 0
+          ? new Date(endTime).toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })
+          : "—";
+
+      if (userEmail) {
+        const html = await render(
+          EventNoticeEmail({
+            siteUrl,
+            preview: `Mining plan auto-renewed · ${planName}`,
+            title: "Mining plan auto-renewed",
+            intro: `Your ${planName} contract renewed automatically. ${formatUsd(purchaseAmount)} was re-committed from your platform wallet for a new ${durationDays}-day cycle running until ${endDate}.`,
+            rows: [
+              { label: "Plan", value: planName },
+              { label: "Principal (USD)", value: formatUsd(purchaseAmount) },
+              { label: "Reward asset", value: coin },
+              { label: "Hash rate", value: `${hashRate} ${hashRateUnit}` },
+              { label: "Duration", value: `${durationDays} days` },
+              { label: "New contract ends", value: endDate },
+              { label: "Operation ID", value: operationId },
+            ],
+            cta: {
+              href: `${siteUrl.replace(/\/$/, "")}/dashboard/mining`,
+              label: "View mining",
+            },
+          }),
+        );
+        await sendHtml({
+          to: userEmail,
+          subject: `Plan auto-renewed · ${planName} · blockhashpro`,
+          html,
+        });
+      }
+
+      for (const adminTo of admins) {
+        const html = await render(
+          EventNoticeEmail({
+            siteUrl,
+            variant: "admin",
+            preview: `Plan auto-renewed · ${userEmail}`,
+            title: "User's mining plan auto-renewed",
+            intro: "A mining operation was automatically renewed and re-charged the user's platform wallet.",
+            rows: [
+              { label: "User", value: userEmail || "—" },
+              { label: "Plan", value: planName },
+              { label: "Principal (USD)", value: formatUsd(purchaseAmount) },
+              { label: "Coin", value: coin },
+              { label: "Operation ID", value: operationId },
+            ],
+            cta: {
+              href: `${siteUrl.replace(/\/$/, "")}/admin/mining-operations`,
+              label: "Mining operations",
+            },
+          }),
+        );
+        await sendHtml({
+          to: adminTo,
+          subject: `[Admin] Plan auto-renewed · ${formatUsd(purchaseAmount)} · ${userEmail || "user"}`,
+          html,
+        });
+      }
+      break;
+    }
+
     case "mining_operation_completed": {
       const userEmail = String(payload.userEmail ?? "");
       const planName = String(payload.planName ?? "Mining plan");

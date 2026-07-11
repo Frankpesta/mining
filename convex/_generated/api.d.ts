@@ -26,6 +26,7 @@ import type * as planSelection from "../planSelection.js";
 import type * as plans from "../plans.js";
 import type * as platformBalanceUsd from "../platformBalanceUsd.js";
 import type * as platformSettings from "../platformSettings.js";
+import type * as priceFeed from "../priceFeed.js";
 import type * as prices from "../prices.js";
 import type * as profiles from "../profiles.js";
 import type * as referrals from "../referrals.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   plans: typeof plans;
   platformBalanceUsd: typeof platformBalanceUsd;
   platformSettings: typeof platformSettings;
+  priceFeed: typeof priceFeed;
   prices: typeof prices;
   profiles: typeof profiles;
   referrals: typeof referrals;

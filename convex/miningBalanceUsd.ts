@@ -10,8 +10,11 @@ import {
   STATIC_USD_PER_CRYPTO,
 } from "../lib/crypto-static-usd";
 
-export function approximateMiningBalanceUsd(user: Doc<"users">): number {
-  return miningWalletUsdTotal(user.miningBalance);
+export function approximateMiningBalanceUsd(
+  user: Doc<"users">,
+  prices?: Partial<Record<string, number>>,
+): number {
+  return miningWalletUsdTotal(user.miningBalance, prices);
 }
 
 function drainCoin(
@@ -34,12 +37,14 @@ function drainCoin(
 
 /**
  * Spends USD notional from the mining wallet (ETH → BTC → LTC → optional alts → `others`).
- * Uses the same static prices as {@link approximateMiningBalanceUsd}.
+ * Uses STATIC_USD_PER_CRYPTO by default; `prices` optionally overrides any
+ * coin's rate (e.g. live ETH/BTC prices fetched by an action).
  */
 export async function deductUsdFromMiningBalance(
   ctx: MutationCtx,
   user: Doc<"users">,
   amountUsd: number,
+  prices?: Partial<Record<string, number>>,
 ): Promise<void> {
   if (amountUsd <= 0) {
     return;
@@ -51,7 +56,7 @@ export async function deductUsdFromMiningBalance(
 
   for (const c of MINING_CORE_DRAIN_ORDER) {
     if (remaining <= 1e-9) break;
-    const p = STATIC_USD_PER_CRYPTO[c];
+    const p = prices?.[c] ?? STATIC_USD_PER_CRYPTO[c];
     const bal = mb[c] ?? 0;
     const { newBalance, remainingUsd } = drainCoin(bal, p, remaining);
     mb[c] = newBalance;
@@ -60,7 +65,7 @@ export async function deductUsdFromMiningBalance(
 
   for (const c of MINING_OPTIONAL_DRAIN_ORDER) {
     if (remaining <= 1e-9) break;
-    const p = STATIC_USD_PER_CRYPTO[c];
+    const p = prices?.[c] ?? STATIC_USD_PER_CRYPTO[c];
     const bal = (mb[c] ?? 0) as number;
     const { newBalance, remainingUsd } = drainCoin(bal, p, remaining);
     mb[c] = newBalance;
@@ -71,7 +76,7 @@ export async function deductUsdFromMiningBalance(
     const symbols = Object.keys(others).sort();
     for (const sym of symbols) {
       if (remaining <= 1e-9) break;
-      const p = STATIC_USD_PER_CRYPTO[sym];
+      const p = prices?.[sym] ?? STATIC_USD_PER_CRYPTO[sym];
       if (p === undefined) continue;
       const bal = others[sym] ?? 0;
       const { newBalance, remainingUsd } = drainCoin(bal, p, remaining);

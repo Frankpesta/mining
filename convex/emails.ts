@@ -258,6 +258,34 @@ export const sendPlanPurchasedEmail = internalAction({
   },
 });
 
+export const sendMiningOperationRenewedEmail = internalAction({
+  args: { operationId: v.id("miningOperations") },
+  handler: async (ctx, args) => {
+    const op = await ctx.runQuery(api.miningOperations.getMiningOperationById, {
+      operationId: args.operationId,
+    });
+    if (!op) return;
+    const [plan, user, admins] = await Promise.all([
+      ctx.runQuery(api.plans.getPlanById, { planId: op.planId }),
+      ctx.runQuery(internal.deposits.getUserById, { userId: op.userId }),
+      ctx.runQuery(internal.users.listAdminEmails, {}),
+    ]);
+    if (!plan) return;
+    await postDispatch("mining_operation_renewed", {
+      operationId: args.operationId,
+      userEmail: user?.email ?? "",
+      planName: plan.name,
+      purchaseAmount: op.purchaseAmount,
+      coin: op.coin,
+      durationDays: plan.duration,
+      endTime: op.endTime,
+      hashRate: op.hashRate,
+      hashRateUnit: op.hashRateUnit,
+      adminRecipients: admins,
+    });
+  },
+});
+
 export const sendMiningOperationCompletedEmail = internalAction({
   args: { operationId: v.id("miningOperations") },
   handler: async (ctx, args) => {

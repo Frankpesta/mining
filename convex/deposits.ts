@@ -6,6 +6,9 @@ import type { Id, Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { selectLeastQualifyingPlanForDeposit } from "./planSelection";
 import { resolveEarningTierForPlan } from "./earningTiers";
+import { deductUsdLikeFromPlatformBalance } from "./platformBalanceUsd";
+import { totalUsdLikePlatformBalance } from "../lib/crypto-static-usd";
+import { fetchLivePricesWithFallback, FALLBACK_PRICES } from "./priceFeed";
 
 type Crypto = "ETH" | "BTC" | "USDT" | "USDC";
 
@@ -262,61 +265,21 @@ export const startMiningFromDeposit = internalAction({
     amount: v.number(),
   },
   handler: async (ctx, args) => {
+    // One shared live-price fetch (Binance -> Coinbase -> CoinGecko, falling
+    // back to hardcoded prices) covers both the deposit-amount conversion
+    // below and the balance check further down - previously these were two
+    // separate, weaker CoinGecko-only fetches.
+    const { prices } = await fetchLivePricesWithFallback();
+    const btcPriceUSD = prices["BTC"] ?? FALLBACK_PRICES.BTC;
+    const ethPriceUSD = prices["ETH"] ?? FALLBACK_PRICES.ETH;
+
     // Convert deposit amount to USD
     let depositAmountUSD: number;
-    
+
     if (args.crypto === "ETH") {
-      // Fetch ETH price
-      try {
-        const response = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const ethPrice = data.ethereum?.usd ?? 0;
-          if (ethPrice > 0) {
-            depositAmountUSD = args.amount * ethPrice;
-          } else {
-            // Fallback: use approximate ETH price if API fails
-            console.warn("Failed to fetch ETH price, using fallback price of $3000");
-            depositAmountUSD = args.amount * 3000;
-          }
-        } else {
-          // Fallback: use approximate ETH price if API fails
-          console.warn("Failed to fetch ETH price, using fallback price of $3000");
-          depositAmountUSD = args.amount * 3000;
-        }
-      } catch (error) {
-        // Fallback: use approximate ETH price if API fails
-        console.warn("Error fetching ETH price, using fallback price of $3000:", error);
-        depositAmountUSD = args.amount * 3000;
-      }
+      depositAmountUSD = args.amount * ethPriceUSD;
     } else if (args.crypto === "BTC") {
-      // Fetch BTC price
-      try {
-        const response = await fetch(
-          "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const btcPrice = data.bitcoin?.usd ?? 0;
-          if (btcPrice > 0) {
-            depositAmountUSD = args.amount * btcPrice;
-          } else {
-            // Fallback: use approximate BTC price if API fails
-            console.warn("Failed to fetch BTC price, using fallback price of $60000");
-            depositAmountUSD = args.amount * 60000;
-          }
-        } else {
-          // Fallback: use approximate BTC price if API fails
-          console.warn("Failed to fetch BTC price, using fallback price of $60000");
-          depositAmountUSD = args.amount * 60000;
-        }
-      } catch (error) {
-        // Fallback: use approximate BTC price if API fails
-        console.warn("Error fetching BTC price, using fallback price of $60000:", error);
-        depositAmountUSD = args.amount * 60000;
-      }
+      depositAmountUSD = args.amount * btcPriceUSD;
     } else if (args.crypto === "USDT" || args.crypto === "USDC") {
       // For stablecoins (USDT, USDC), use 1:1 conversion to USD
       depositAmountUSD = args.amount;
@@ -368,34 +331,13 @@ export const startMiningFromDeposit = internalAction({
     if (!user) {
       throw new ConvexError("User not found");
     }
-    
-    // Calculate total balance in USD
-    // We need to convert BTC and ETH balances to USD for comparison with purchaseAmount
-    // Fetch prices for BTC and ETH
-    let btcPriceUSD = 60000; // Fallback price
-    let ethPriceUSD = 3000; // Fallback price
-    
-    try {
-      const response = await fetch(
-        "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd"
-      );
-      if (response.ok) {
-        const data = await response.json();
-        btcPriceUSD = data.bitcoin?.usd ?? 60000;
-        ethPriceUSD = data.ethereum?.usd ?? 3000;
-      }
-    } catch (error) {
-      console.warn("Failed to fetch prices for balance calculation, using fallback prices");
-    }
-    
-    const btcBalance = user.platformBalance.BTC ?? 0;
-    const ethBalance = user.platformBalance.ETH ?? 0;
-    const totalBalanceUSD =
-      (user.platformBalance.USDC ?? 0) +
-      (user.platformBalance.USDT ?? 0) +
-      ethBalance * ethPriceUSD +
-      btcBalance * btcPriceUSD;
-    
+
+    // Total balance in USD, using the live prices fetched above.
+    const totalBalanceUSD = totalUsdLikePlatformBalance(user.platformBalance, {
+      ETH: ethPriceUSD,
+      BTC: btcPriceUSD,
+    });
+
     // Use the deposit amount USD, but cap at plan's maxPriceUSD if set
     let purchaseAmount = depositAmountUSD;
     if (matchingPlan.maxPriceUSD !== undefined && purchaseAmount > matchingPlan.maxPriceUSD) {
@@ -499,60 +441,14 @@ export const createMiningOperationFromDeposit = internalMutation({
       createdAt: now,
     });
 
-    const usdc = user.platformBalance.USDC;
-    const usdt = user.platformBalance.USDT;
-    const ethBalance = user.platformBalance.ETH;
-    const btcBalance = user.platformBalance.BTC ?? 0;
-    const totalValueUSD =
-      usdc + usdt + ethBalance * args.ethPriceUSD + btcBalance * args.btcPriceUSD;
+    const priceOverride = { ETH: args.ethPriceUSD, BTC: args.btcPriceUSD };
+    const totalValueUSD = totalUsdLikePlatformBalance(user.platformBalance, priceOverride);
 
     if (totalValueUSD + 1e-9 < args.purchaseAmount) {
       throw new ConvexError("Insufficient platform balance");
     }
 
-    let remainingCostUSD = args.purchaseAmount;
-    let nextUSDC = usdc;
-    let nextUSDT = usdt;
-    let nextETH = ethBalance;
-    let nextBTC = btcBalance;
-
-    const takeUsdFromStable = (bal: number): [number, number] => {
-      if (remainingCostUSD <= 0 || bal <= 0) return [bal, 0];
-      const take = Math.min(bal, remainingCostUSD);
-      remainingCostUSD -= take;
-      return [bal - take, take];
-    };
-
-    [nextUSDC] = takeUsdFromStable(nextUSDC);
-    [nextUSDT] = takeUsdFromStable(nextUSDT);
-
-    if (remainingCostUSD > 0 && nextETH > 0) {
-      const ethUsd = nextETH * args.ethPriceUSD;
-      const takeUsd = Math.min(ethUsd, remainingCostUSD);
-      nextETH -= takeUsd / args.ethPriceUSD;
-      remainingCostUSD -= takeUsd;
-    }
-
-    if (remainingCostUSD > 0 && nextBTC > 0) {
-      const btcUsd = nextBTC * args.btcPriceUSD;
-      const takeUsd = Math.min(btcUsd, remainingCostUSD);
-      nextBTC -= takeUsd / args.btcPriceUSD;
-      remainingCostUSD -= takeUsd;
-    }
-
-    if (remainingCostUSD > 1e-6) {
-      throw new ConvexError("Insufficient platform balance");
-    }
-
-    await ctx.db.patch(args.userId, {
-      platformBalance: {
-        ...user.platformBalance,
-        USDC: nextUSDC,
-        USDT: nextUSDT,
-        ETH: nextETH,
-        BTC: nextBTC,
-      },
-    });
+    await deductUsdLikeFromPlatformBalance(ctx, user, args.purchaseAmount, priceOverride);
 
     await ctx.db.insert("auditLogs", {
       actorId: args.userId,

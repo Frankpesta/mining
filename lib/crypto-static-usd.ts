@@ -43,24 +43,51 @@ export const MINING_OPTIONAL_DRAIN_ORDER = [
   "UNI",
 ] as const;
 
-/** Approximate USD value of mining wallet (for plan purchase UI). */
+/**
+ * USD value of the platform wallet: USDC/USDT at 1:1, ETH and BTC priced via
+ * STATIC_USD_PER_CRYPTO by default (or the optional `prices` override, e.g.
+ * live prices fetched by an action). Shared by convex/platformBalanceUsd.ts
+ * (server) and any UI that needs to display/gate on this figure, so every
+ * caller always agrees.
+ */
+export function totalUsdLikePlatformBalance(
+  platformBalance: Doc<"users">["platformBalance"],
+  prices?: { ETH?: number; BTC?: number },
+): number {
+  const ethPrice = prices?.ETH ?? STATIC_USD_PER_CRYPTO.ETH;
+  const btcPrice = prices?.BTC ?? STATIC_USD_PER_CRYPTO.BTC;
+  return (
+    (platformBalance.USDC ?? 0) +
+    (platformBalance.USDT ?? 0) +
+    (platformBalance.ETH ?? 0) * ethPrice +
+    (platformBalance.BTC ?? 0) * btcPrice
+  );
+}
+
+/**
+ * Approximate USD value of mining wallet (for plan purchase / reinvestment
+ * UI). `prices` optionally overrides any coin's rate (e.g. live ETH/BTC
+ * prices fetched by an action) — coins not present in the override fall
+ * back to STATIC_USD_PER_CRYPTO.
+ */
 export function approximateMiningBalanceUsd(
   miningBalance: Doc<"users">["miningBalance"],
+  prices?: Partial<Record<string, number>>,
 ): number {
   let total = 0;
   for (const c of MINING_CORE_DRAIN_ORDER) {
     const bal = miningBalance[c] ?? 0;
-    const p = STATIC_USD_PER_CRYPTO[c];
+    const p = prices?.[c] ?? STATIC_USD_PER_CRYPTO[c];
     if (bal > 0 && p) total += bal * p;
   }
   for (const c of MINING_OPTIONAL_DRAIN_ORDER) {
     const bal = (miningBalance[c] ?? 0) as number;
-    const p = STATIC_USD_PER_CRYPTO[c];
+    const p = prices?.[c] ?? STATIC_USD_PER_CRYPTO[c];
     if (bal > 0 && p) total += bal * p;
   }
   const others = miningBalance.others ?? {};
   for (const [sym, amt] of Object.entries(others)) {
-    const p = STATIC_USD_PER_CRYPTO[sym];
+    const p = prices?.[sym] ?? STATIC_USD_PER_CRYPTO[sym];
     if (p !== undefined && amt > 0) total += amt * p;
   }
   return total;

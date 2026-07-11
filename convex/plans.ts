@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 
-import { mutation, query, internalQuery } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { resolveEarningTierForPlan } from "./earningTiers";
@@ -12,6 +12,7 @@ import {
   deductUsdLikeFromPlatformBalance,
   totalUsdLikePlatformBalance,
 } from "./platformBalanceUsd";
+import { fetchLivePricesWithFallback } from "./priceFeed";
 
 export const listPlans = query({
   args: {
@@ -200,7 +201,33 @@ export const reorderPlans = mutation({
   },
 });
 
-export const purchasePlan = mutation({
+/**
+ * Public entry point for purchasing/reinvesting into a plan. This is an
+ * action (not a mutation) so it can fetch live BTC/ETH prices before
+ * delegating to purchasePlanInternal — mutations can't make network calls.
+ * The actual balance check-and-deduct still happens atomically inside the
+ * internal mutation, so a price briefly going stale between the fetch here
+ * and the mutation running can't cause a double-spend, only (at most) a
+ * slightly-stale valuation for that one purchase.
+ */
+export const purchasePlan = action({
+  args: {
+    userId: v.id("users"),
+    planId: v.id("plans"),
+    coin: v.string(),
+    fundingSource: v.optional(v.union(v.literal("platform"), v.literal("mining"))),
+    commitAmountUsd: v.optional(v.number()),
+  },
+  handler: async (ctx, args): Promise<Id<"miningOperations">> => {
+    const { prices } = await fetchLivePricesWithFallback();
+    return ctx.runMutation(internal.plans.purchasePlanInternal, {
+      ...args,
+      prices,
+    });
+  },
+});
+
+export const purchasePlanInternal = internalMutation({
   args: {
     userId: v.id("users"),
     planId: v.id("plans"),
@@ -209,6 +236,8 @@ export const purchasePlan = mutation({
     fundingSource: v.optional(v.union(v.literal("platform"), v.literal("mining"))),
     /** USD principal to commit (must be within plan min/max and wallet). If omitted, uses full wallet up to max. */
     commitAmountUsd: v.optional(v.number()),
+    /** Live BTC/ETH prices fetched by the purchasePlan action; falls back to STATIC_USD_PER_CRYPTO for any coin not present. */
+    prices: v.optional(v.record(v.string(), v.number())),
   },
   handler: async (ctx, args) => {
     const [user, plan] = await Promise.all([
@@ -232,14 +261,14 @@ export const purchasePlan = mutation({
     if (args.coin !== "BTC" && args.coin !== "ETH") {
       throw new ConvexError(`Only BTC and ETH can be mined. Received: ${args.coin}`);
     }
-    
+
     if (!plan.supportedCoins.includes(args.coin)) {
       throw new ConvexError(`Coin ${args.coin} is not supported by this plan`);
     }
 
     const fundingSource = args.fundingSource ?? "platform";
-    const totalPlatformUsd = totalUsdLikePlatformBalance(user);
-    const totalMiningUsd = approximateMiningBalanceUsd(user);
+    const totalPlatformUsd = totalUsdLikePlatformBalance(user, args.prices);
+    const totalMiningUsd = approximateMiningBalanceUsd(user, args.prices);
     const totalBalance =
       fundingSource === "mining" ? totalMiningUsd : totalPlatformUsd;
 
@@ -325,9 +354,9 @@ export const purchasePlan = mutation({
     });
 
     if (fundingSource === "mining") {
-      await deductUsdFromMiningBalance(ctx, user, purchaseAmount);
+      await deductUsdFromMiningBalance(ctx, user, purchaseAmount, args.prices);
     } else {
-      await deductUsdLikeFromPlatformBalance(ctx, user, purchaseAmount);
+      await deductUsdLikeFromPlatformBalance(ctx, user, purchaseAmount, args.prices);
     }
 
     await ctx.db.insert("auditLogs", {

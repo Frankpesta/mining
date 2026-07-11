@@ -9,7 +9,10 @@ import {
 } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
-import { approximateMiningBalanceUsd } from "@/lib/crypto-static-usd";
+import {
+  approximateMiningBalanceUsd,
+  totalUsdLikePlatformBalance,
+} from "@/lib/crypto-static-usd";
 
 export default async function MiningPackagesPage() {
   const current = await getCurrentUser();
@@ -20,10 +23,7 @@ export default async function MiningPackagesPage() {
   const convex = getConvexClient();
   const plans = await convex.query(api.plans.listPlans, { activeOnly: true });
 
-  const platformUsd =
-    current.user.platformBalance.ETH +
-    current.user.platformBalance.USDT +
-    current.user.platformBalance.USDC;
+  const platformUsd = totalUsdLikePlatformBalance(current.user.platformBalance);
   const miningUsd = approximateMiningBalanceUsd(current.user.miningBalance);
 
   return (
@@ -53,7 +53,8 @@ export default async function MiningPackagesPage() {
                 })}
               </span>
               <span className="text-xs text-muted-foreground sm:text-sm">
-                ETH: {current.user.platformBalance.ETH.toFixed(4)}, USDT:{" "}
+                BTC: {(current.user.platformBalance.BTC ?? 0).toFixed(6)}, ETH:{" "}
+                {current.user.platformBalance.ETH.toFixed(4)}, USDT:{" "}
                 {current.user.platformBalance.USDT.toFixed(2)}, USDC:{" "}
                 {current.user.platformBalance.USDC.toFixed(2)}
               </span>

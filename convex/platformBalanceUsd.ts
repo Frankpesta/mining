@@ -2,7 +2,10 @@ import { ConvexError } from "convex/values";
 
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { STATIC_USD_PER_CRYPTO } from "../lib/crypto-static-usd";
+import {
+  STATIC_USD_PER_CRYPTO,
+  totalUsdLikePlatformBalance as totalUsdLikePlatformBalanceShared,
+} from "../lib/crypto-static-usd";
 
 /**
  * USD value of the platform wallet: USDC/USDT at 1:1, ETH and BTC priced via
@@ -10,29 +13,38 @@ import { STATIC_USD_PER_CRYPTO } from "../lib/crypto-static-usd";
  * approximateMiningBalanceUsd in miningBalanceUsd.ts). BTC must be included:
  * most deposits on this platform are BTC, so omitting it left BTC-funded
  * users unable to pass the balance check when purchasing a mining plan.
+ *
+ * Re-exported from lib/crypto-static-usd.ts so client-side pages (e.g. the
+ * mining-packages balance display) compute this the exact same way the
+ * server does — they must never diverge.
+ *
+ * `prices` optionally overrides ETH/BTC valuation (e.g. with live prices an
+ * action fetched) — callers that only have mutation context omit it and get
+ * the static reference rates.
  */
-export function totalUsdLikePlatformBalance(user: Doc<"users">): number {
-  const pb = user.platformBalance;
-  return (
-    (pb.USDC ?? 0) +
-    (pb.USDT ?? 0) +
-    (pb.ETH ?? 0) * STATIC_USD_PER_CRYPTO.ETH +
-    (pb.BTC ?? 0) * STATIC_USD_PER_CRYPTO.BTC
-  );
+export function totalUsdLikePlatformBalance(
+  user: Doc<"users">,
+  prices?: { ETH?: number; BTC?: number },
+): number {
+  return totalUsdLikePlatformBalanceShared(user.platformBalance, prices);
 }
 
 /**
  * Deducts `amount` USD from USDC, then USDT, then ETH, then BTC (ETH/BTC
- * priced via STATIC_USD_PER_CRYPTO). Throws if insufficient.
+ * priced via STATIC_USD_PER_CRYPTO, or the optional `prices` override).
+ * Throws if insufficient.
  */
 export async function deductUsdLikeFromPlatformBalance(
   ctx: MutationCtx,
   user: Doc<"users">,
   amount: number,
+  prices?: { ETH?: number; BTC?: number },
 ): Promise<void> {
   if (amount <= 0) {
     return;
   }
+  const ethPrice = prices?.ETH ?? STATIC_USD_PER_CRYPTO.ETH;
+  const btcPrice = prices?.BTC ?? STATIC_USD_PER_CRYPTO.BTC;
   let remaining = amount;
   let usdc = user.platformBalance.USDC ?? 0;
   let usdt = user.platformBalance.USDT ?? 0;
@@ -56,8 +68,8 @@ export async function deductUsdLikeFromPlatformBalance(
 
   usdc = takeStable(usdc);
   usdt = takeStable(usdt);
-  eth = takePriced(eth, STATIC_USD_PER_CRYPTO.ETH);
-  btc = takePriced(btc, STATIC_USD_PER_CRYPTO.BTC);
+  eth = takePriced(eth, ethPrice);
+  btc = takePriced(btc, btcPrice);
 
   if (remaining > 1e-6) {
     throw new ConvexError("Insufficient platform balance");
