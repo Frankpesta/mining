@@ -83,6 +83,63 @@ export default function GoogleTranslate({ className = "" }: GoogleTranslateProps
   const [currentLang, setCurrentLang] = useState<string>(initialLang);
   const scriptLoaded = useRef(false);
 
+  // Google Translate rewrites text nodes directly in the DOM, outside React's
+  // control. When React later reconciles a subtree Google Translate has
+  // touched (e.g. MiningRatesTable swapping its status span on each poll),
+  // it can call insertBefore/removeChild on a node that's already been moved,
+  // throwing "NotFoundError". This is a well-documented React/Google
+  // Translate conflict (facebook/react#11538) — patch both methods to fail
+  // soft instead of crashing the tree.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ((Node.prototype as any).__translateFixApplied) return;
+
+    const patch = (method: "insertBefore" | "removeChild") => {
+      const original = Node.prototype[method] as any;
+      (Node.prototype as any)[method] = function (...args: any[]) {
+        try {
+          return original.apply(this, args);
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "NotFoundError") {
+            return args[0];
+          }
+          throw error;
+        }
+      };
+    };
+
+    patch("insertBefore");
+    patch("removeChild");
+    (Node.prototype as any).__translateFixApplied = true;
+  }, []);
+
+  // The Google Translate script performs its own internal network calls that
+  // can fail (ad blockers, privacy extensions, regional restrictions). Those
+  // rejections originate inside Google's own minified bundle (stack frames
+  // show only "<anonymous>", no app source) and are harmless to us — the
+  // widget just falls back to no translation. Suppress only that narrow,
+  // clearly third-party noise so it doesn't surface as a crash overlay.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const reason = event.reason;
+      const isThirdPartyFetchNoise =
+        reason instanceof TypeError &&
+        reason.message === "Failed to fetch" &&
+        typeof reason.stack === "string" &&
+        reason.stack.includes("<anonymous>") &&
+        !reason.stack.includes(window.location.origin);
+
+      if (isThirdPartyFetchNoise) {
+        event.preventDefault();
+      }
+    };
+
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () => window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined" || scriptLoaded.current) return;
 
