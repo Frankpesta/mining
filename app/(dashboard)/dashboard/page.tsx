@@ -50,6 +50,7 @@ export default async function DashboardOverviewPage() {
       }
     }
   }
+  balanceCoins.push(...Object.keys(summary.metrics.totalWithdrawnByCoin));
   const prices = balanceCoins.length > 0 ? await getCryptoPrices([...new Set(balanceCoins)]) : {};
   const miningBalanceUSD = summary.balances.mining
     ? calculateBalanceUSD(summary.balances.mining, prices)
@@ -57,6 +58,7 @@ export default async function DashboardOverviewPage() {
   const platformBalanceUSD = summary.balances.platform
     ? calculateBalanceUSD(summary.balances.platform, prices)
     : 0;
+  const totalWithdrawnUSD = calculateBalanceUSD(summary.metrics.totalWithdrawnByCoin, prices);
 
   const statCards = [
     {
@@ -75,9 +77,9 @@ export default async function DashboardOverviewPage() {
       hint: `${summary.metrics.totalActiveHashrate.toLocaleString()} total hash rate`,
     },
     {
-      label: "Pending withdrawals",
-      value: summary.metrics.pendingWithdrawals.toLocaleString(),
-      hint: "Awaiting admin review",
+      label: "Total withdrawals",
+      value: formatCurrency(totalWithdrawnUSD),
+      hint: "Total amount withdrawn to date",
     },
     {
       label: "Referral bonus earned",

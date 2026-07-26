@@ -93,15 +93,20 @@ export const getUserDashboardSummary = query({
       .order("desc")
       .take(5);
 
-    const recentWithdrawals = await ctx.db
+    const allWithdrawals = await ctx.db
       .query("withdrawals")
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .order("desc")
-      .take(5);
+      .collect();
 
-    const pendingWithdrawals = recentWithdrawals.filter(
-      (withdrawal) => withdrawal.status === "pending",
-    ).length;
+    const recentWithdrawals = allWithdrawals.slice(0, 5);
+
+    const totalWithdrawnByCoin: Record<string, number> = {};
+    for (const withdrawal of allWithdrawals) {
+      if (withdrawal.status !== "completed") continue;
+      totalWithdrawnByCoin[withdrawal.crypto] =
+        (totalWithdrawnByCoin[withdrawal.crypto] ?? 0) + withdrawal.finalAmount;
+    }
 
     const totalPlatformBalance = sumPlatformBalance(user.platformBalance);
     const totalMiningBalance = sumMiningBalance(user.miningBalance);
@@ -129,7 +134,7 @@ export const getUserDashboardSummary = query({
         miningBalance: totalMiningBalance,
         activeOperations: activeOperations.length,
         totalActiveHashrate,
-        pendingWithdrawals,
+        totalWithdrawnByCoin,
       },
       balances: {
         platform: user.platformBalance,
