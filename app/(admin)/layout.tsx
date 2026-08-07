@@ -9,6 +9,7 @@ const navigation = [
   { href: "/admin", label: "Overview", icon: "shield-check" },
   { href: "/admin/deposits", label: "Deposits", icon: "wallet-minimal" },
   { href: "/admin/withdrawals", label: "Withdrawals", icon: "compass" },
+  { href: "/admin/bank-withdrawals", label: "Bank Withdrawals", icon: "landmark" },
   { href: "/admin/mining-packages", label: "Mining Packages", icon: "bar-chart-3" },
   { href: "/admin/users", label: "Users", icon: "users" },
   { href: "/admin/profiles", label: "Profiles", icon: "users" },

@@ -7,7 +7,12 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { getConvexClient } from "@/lib/convex/client";
 import { getWithdrawalFee } from "@/lib/payments/fees";
 
-import { withdrawalRequestSchema, type WithdrawalRequestValues } from "./validators";
+import {
+  bankWithdrawalRequestSchema,
+  withdrawalRequestSchema,
+  type BankWithdrawalRequestValues,
+  type WithdrawalRequestValues,
+} from "./validators";
 
 export async function submitWithdrawalRequest(values: WithdrawalRequestValues) {
   const parsed = withdrawalRequestSchema.safeParse(values);
@@ -56,6 +61,57 @@ export async function submitWithdrawalRequest(values: WithdrawalRequestValues) {
     return {
       success: false,
       error: "Unable to submit withdrawal request. Please try again shortly.",
+    };
+  }
+}
+
+export async function submitBankWithdrawalRequest(values: BankWithdrawalRequestValues) {
+  const parsed = bankWithdrawalRequestSchema.safeParse(values);
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid withdrawal request",
+    };
+  }
+
+  const current = await getCurrentUser();
+  if (!current) {
+    return { success: false, error: "You must be signed in to request a withdrawal." };
+  }
+
+  const convex = getConvexClient();
+
+  try {
+    await convex.mutation(api.bankWithdrawals.createBankWithdrawalRequest, {
+      userId: current.user._id,
+      balanceSource: parsed.data.balanceSource,
+      crypto: parsed.data.crypto as "BTC" | "ETH" | "USDT" | "USDC" | "SOL" | "LTC" | "BNB" | "ADA" | "XRP" | "DOGE" | "DOT" | "MATIC" | "AVAX" | "ATOM" | "LINK" | "UNI",
+      amount: parsed.data.amount,
+      currency: parsed.data.currency,
+      accountHolderName: parsed.data.accountHolderName,
+      bankName: parsed.data.bankName,
+      accountNumber: parsed.data.accountNumber,
+      accountType: parsed.data.accountType,
+      routingNumber: parsed.data.routingNumber,
+      swiftCode: parsed.data.swiftCode,
+      iban: parsed.data.iban,
+      bankAddress: parsed.data.bankAddress,
+      bankCountry: parsed.data.bankCountry,
+      note: parsed.data.note,
+    });
+
+    revalidatePath("/dashboard/wallet");
+    revalidatePath("/dashboard/withdraw");
+    revalidatePath("/dashboard");
+
+    return { success: true } as const;
+  } catch (error) {
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return {
+      success: false,
+      error: "Unable to submit bank withdrawal request. Please try again shortly.",
     };
   }
 }

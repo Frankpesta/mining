@@ -1,6 +1,6 @@
 import { api } from "@/convex/_generated/api";
 import type { Doc } from "@/convex/_generated/dataModel";
-import { WithdrawForm } from "@/components/dashboard/withdraw-form";
+import { WithdrawMethodTabs } from "@/components/dashboard/withdraw-method-tabs";
 import { StatusBadge } from "@/components/dashboard/status-badge";
 import {
   Card,
@@ -31,9 +31,30 @@ export default async function WithdrawPage() {
   }
 
   const convex = getConvexClient();
-  const withdrawals = await convex.query(api.withdrawals.listUserWithdrawals, {
-    userId: current.user._id,
-    limit: 25,
+  const [withdrawals, bankWithdrawals] = await Promise.all([
+    convex.query(api.withdrawals.listUserWithdrawals, {
+      userId: current.user._id,
+      limit: 25,
+    }),
+    convex.query(api.bankWithdrawals.listUserBankWithdrawals, {
+      userId: current.user._id,
+      limit: 25,
+    }),
+  ]);
+
+  const history = [
+    ...withdrawals.map((withdrawal: Doc<"withdrawals">) => ({
+      method: "crypto" as const,
+      withdrawal,
+    })),
+    ...bankWithdrawals.map((bankWithdrawal: Doc<"bankWithdrawals">) => ({
+      method: "bank" as const,
+      bankWithdrawal,
+    })),
+  ].sort((a, b) => {
+    const aTime = a.method === "crypto" ? a.withdrawal.createdAt : a.bankWithdrawal.createdAt;
+    const bTime = b.method === "crypto" ? b.withdrawal.createdAt : b.bankWithdrawal.createdAt;
+    return bTime - aTime;
   });
 
   const platformBalances = platformBalancesForWithdraw(current.user.platformBalance);
@@ -120,7 +141,7 @@ export default async function WithdrawPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <WithdrawForm
+            <WithdrawMethodTabs
               platformBalances={platformBalances}
               miningBalances={miningBalances}
             />
@@ -134,47 +155,91 @@ export default async function WithdrawPage() {
           <CardDescription>Track the status of recent withdrawal requests.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          {withdrawals.length === 0 ? (
+          {history.length === 0 ? (
             <p className="text-muted-foreground">No withdrawal requests yet.</p>
           ) : (
-            withdrawals.map((withdrawal: Doc<"withdrawals">) => (
-              <article key={withdrawal._id} className="rounded-lg border border-border/60 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">
-                      {withdrawal.amount.toLocaleString()} {withdrawal.crypto}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Destination: {withdrawal.destinationAddress}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Requested {formatDate(withdrawal.createdAt)}
-                      {withdrawal.balanceSource === "mining"
-                        ? " • From mining earnings"
-                        : withdrawal.balanceSource === "platform" || withdrawal.balanceSource === undefined
-                          ? " • From platform wallet"
-                          : ""}
-                    </p>
+            history.map((entry) => {
+              if (entry.method === "crypto") {
+                const withdrawal = entry.withdrawal;
+                return (
+                  <article key={withdrawal._id} className="rounded-lg border border-border/60 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-semibold">
+                          <span className="mr-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            Crypto
+                          </span>
+                          {withdrawal.amount.toLocaleString()} {withdrawal.crypto}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Destination: {withdrawal.destinationAddress}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Requested {formatDate(withdrawal.createdAt)}
+                          {withdrawal.balanceSource === "mining"
+                            ? " • From mining earnings"
+                            : withdrawal.balanceSource === "platform" || withdrawal.balanceSource === undefined
+                              ? " • From platform wallet"
+                              : ""}
+                        </p>
+                      </div>
+                      <StatusBadge status={withdrawal.status} />
+                    </div>
+                    <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
+                      <span>
+                        Network fee: {withdrawal.networkFee} {withdrawal.crypto}
+                      </span>
+                      <span>
+                        Estimated payout: {withdrawal.finalAmount.toFixed(6)} {withdrawal.crypto}
+                      </span>
+                      {withdrawal.txHash ? (
+                        <span className="truncate">
+                          Tx hash: <span className="font-mono">{withdrawal.txHash}</span>
+                        </span>
+                      ) : null}
+                      {withdrawal.userNote ? <span>User note: {withdrawal.userNote}</span> : null}
+                      {withdrawal.adminNote ? <span>Admin note: {withdrawal.adminNote}</span> : null}
+                    </div>
+                  </article>
+                );
+              }
+
+              const bankWithdrawal = entry.bankWithdrawal;
+              return (
+                <article key={bankWithdrawal._id} className="rounded-lg border border-border/60 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">
+                        <span className="mr-2 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          Bank
+                        </span>
+                        {bankWithdrawal.amount.toLocaleString()} {bankWithdrawal.crypto} →{" "}
+                        {bankWithdrawal.currency}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {bankWithdrawal.bankName} •{" "}
+                        {bankWithdrawal.accountNumber.replace(/.(?=.{4})/g, "•")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Requested {formatDate(bankWithdrawal.createdAt)}
+                        {bankWithdrawal.balanceSource === "mining"
+                          ? " • From mining earnings"
+                          : " • From platform wallet"}
+                      </p>
+                    </div>
+                    <StatusBadge status={bankWithdrawal.status} />
                   </div>
-                  <StatusBadge status={withdrawal.status} />
-                </div>
-                <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
-                  <span>
-                    Network fee: {withdrawal.networkFee} {withdrawal.crypto}
-                  </span>
-                  <span>
-                    Estimated payout: {withdrawal.finalAmount.toFixed(6)} {withdrawal.crypto}
-                  </span>
-                  {withdrawal.txHash ? (
-                    <span className="truncate">
-                      Tx hash: <span className="font-mono">{withdrawal.txHash}</span>
-                    </span>
-                  ) : null}
-                  {withdrawal.userNote ? <span>User note: {withdrawal.userNote}</span> : null}
-                  {withdrawal.adminNote ? <span>Admin note: {withdrawal.adminNote}</span> : null}
-                </div>
-              </article>
-            ))
+                  <div className="mt-3 grid gap-1 text-xs text-muted-foreground sm:grid-cols-3">
+                    <span>Account holder: {bankWithdrawal.accountHolderName}</span>
+                    <span>Bank country: {bankWithdrawal.bankCountry}</span>
+                    {bankWithdrawal.userNote ? <span>User note: {bankWithdrawal.userNote}</span> : null}
+                    {bankWithdrawal.adminNote ? (
+                      <span>Admin note: {bankWithdrawal.adminNote}</span>
+                    ) : null}
+                  </div>
+                </article>
+              );
+            })
           )}
         </CardContent>
       </Card>
